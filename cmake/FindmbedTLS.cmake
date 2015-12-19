@@ -28,7 +28,7 @@ find_library(mbedX509_LIBRARY
 
 if(mbedTLS_INCLUDE_DIR AND mbedTLS_LIBRARY)
 	set(mbedTLS_FOUND TRUE)
-	set(mbedTLS_LIBRARIES ${mbedTLS_LIBRARY} ${mbedCRYPTO_LIBRARY} ${mbedX509_LIBRARY})
+	set(mbedTLS_LIBRARIES ${mbedTLS_LIBRARY} ${mbedX509_LIBRARY} ${mbedCRYPTO_LIBRARY})
 	if(WIN32)
 		set(mbedTLS_LIBRARIES ${mbedTLS_LIBRARIES} ws2_32)
 	endif(WIN32)
