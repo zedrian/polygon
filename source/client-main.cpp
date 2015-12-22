@@ -1,4 +1,6 @@
+#include <iomanip>
 #include <iostream>
+#include <vector>
 
 #include <mbedtls/platform.h>
 #include <mbedtls/net.h>
@@ -8,7 +10,6 @@
 #include <mbedtls/debug.h>
 #include <mbedtls/certs.h>
 #include <mbedtls/error.h>
-#include <string.h>
 
 
 using std::cin;
@@ -16,6 +17,9 @@ using std::cout;
 using std::endl;
 using std::to_string;
 using std::string;
+using std::vector;
+using std::hex;
+using std::dec;
 
 
 static void my_debug(void* ctx, int level,
@@ -30,7 +34,7 @@ int main(int argc, char* argv[])
     int ret, len;
     mbedtls_net_context server_fd;
     uint32_t flags;
-    unsigned char buf[1024];
+    vector<unsigned char> buf(1024, 0x00);
     string personalizating_vector = "dtls_client";
     int retry_left = 5;
     string server_address;
@@ -179,11 +183,13 @@ int main(int argc, char* argv[])
      */
     send_request:
     cout << "Sending to server: ";
+    for(unsigned char i  = 0; i < 10; ++i)
+        buf[i] = i + i*0x10;
 
-    len = sizeof("message") - 1;
+    len = 10;
 
     do
-        ret = mbedtls_ssl_write(&ssl, (unsigned char*) "message", len);
+        ret = mbedtls_ssl_write(&ssl, buf.data(), len);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret < 0)
@@ -193,7 +199,13 @@ int main(int argc, char* argv[])
     }
 
     len = ret;
-    cout << len << " bytes written: " << "message" << endl;
+    cout << "Sent to server (" << len << " bytes): ";
+    for (int i = 0; i < len; ++i)
+    {
+        unsigned short x = buf[i];
+        cout << hex << x << " ";
+    }
+    cout << endl;
 
     /*
      * 7. Read the echo response
@@ -201,10 +213,10 @@ int main(int argc, char* argv[])
     cout << "Receiving from server: ";
 
     len = sizeof(buf) - 1;
-    memset(buf, 0, sizeof(buf));
+    buf = vector<unsigned char>(len, 0x00);
 
     do
-        ret = mbedtls_ssl_read(&ssl, buf, len);
+        ret = mbedtls_ssl_read(&ssl, buf.data(), len);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret <= 0)
@@ -229,7 +241,13 @@ int main(int argc, char* argv[])
     }
 
     len = ret;
-    cout << len << " bytes received: " << buf << endl;
+    cout << "Received from server (" << dec << len << " bytes): ";
+    for (int i = 0; i < len; ++i)
+    {
+        unsigned short x = buf[i];
+        cout << hex << x << " ";
+    }
+    cout << endl;
 
     /*
      * 8. Done, cleanly close the connection

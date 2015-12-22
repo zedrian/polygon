@@ -11,7 +11,6 @@
 #include <mbedtls/ssl_cache.h>
 #include <mbedtls/debug.h>
 #include <mbedtls/error.h>
-#include <mbedtls/platform.h>
 #include <mbedtls/certs.h>
 
 
@@ -22,6 +21,7 @@ using std::cin;
 using std::endl;
 using std::to_string;
 using std::hex;
+using std::dec;
 
 
 static void my_debug(void* ctx, int level,
@@ -268,7 +268,7 @@ int main(int argc, char** argv)
     cout << "success" << endl;
 
     len = ret;
-    cout << "Received from client (" << len << " bytes): ";
+    cout << "Received from client (" << dec << len << " bytes): ";
     for (int i = 0; i < len; ++i)
     {
         unsigned short x = buf[i];
@@ -293,7 +293,7 @@ int main(int argc, char** argv)
     cout << "success" << endl;
 
     len = ret;
-    cout << "Sent to client (" << len << " bytes): ";
+    cout << "Sent to client (" << dec << len << " bytes): ";
     for (int i = 0; i < len; ++i)
     {
         unsigned short x = buf[i];
