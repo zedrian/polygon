@@ -40,27 +40,25 @@ string stringFromCode(int code)
     return string(buffer);
 }
 
+mbedtls_net_context server_fd;
+mbedtls_x509_crt cacert;
+mbedtls_ssl_context ssl;
+mbedtls_ssl_config conf;
+mbedtls_entropy_context entropy;
+mbedtls_ctr_drbg_context ctr_drbg;
+
 void work()
 {
+
     int ret, len;
-    mbedtls_net_context server_fd;
     uint32_t flags;
     vector<unsigned char> buf(1024, 0x00);
     string personalizating_vector = "dtls_client";
     int retry_left = 5;
     string server_address;
-
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
-    mbedtls_x509_crt cacert;
     mbedtls_timing_delay_context timer;
 
-
-#if defined(MBEDTLS_DEBUG_C)
     mbedtls_debug_set_threshold(0);
-#endif
 
     /*
      * 0. Initialize the RNG and the session data
@@ -211,7 +209,7 @@ void work()
                 cout << "timeout" << endl;
                 if (retry_left-- > 0)
                     goto send_request;
-                goto exit;
+                return;
 
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                 cout << "connection was closed gracefully" << endl;
@@ -248,8 +246,11 @@ void work()
     /*
      * 9. Final clean-ups and exit
      */
-    exit:
+}
 
+void release()
+{
+    cout << "Release: ";
     mbedtls_net_free(&server_fd);
 
     mbedtls_x509_crt_free(&cacert);
@@ -257,7 +258,10 @@ void work()
     mbedtls_ssl_config_free(&conf);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+
+    cout << "success" << endl;
 }
+
 
 int main(int argc, char* argv[])
 {
@@ -269,4 +273,5 @@ int main(int argc, char* argv[])
     {
         cout << "fail: " << e.what() << endl;
     }
+    release();
 }
