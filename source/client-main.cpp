@@ -1,6 +1,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
+#include <stdexcept>
 
 #include <mbedtls/platform.h>
 #include <mbedtls/net.h>
@@ -20,6 +21,8 @@ using std::string;
 using std::vector;
 using std::hex;
 using std::dec;
+using std::runtime_error;
+using std::exception;
 
 
 static void my_debug(void* ctx, int level,
@@ -29,7 +32,7 @@ static void my_debug(void* ctx, int level,
     cout << file << ":" << line << ": " << str << endl;
 }
 
-int main(int argc, char* argv[])
+void work()
 {
     int ret, len;
     mbedtls_net_context server_fd;
@@ -64,10 +67,7 @@ int main(int argc, char* argv[])
 
     mbedtls_entropy_init(&entropy);
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-    {
-        cout << "failed: mbedtls_ctr_drbg_seed() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret));
 
     cout << "success" << endl;
 
@@ -78,10 +78,7 @@ int main(int argc, char* argv[])
 
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
-    {
-        cout << "failed: mbedtls_x509_crt_parse() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret));
 
     cout << "success (" << ret << " skipped)" << endl;
 
@@ -96,10 +93,7 @@ int main(int argc, char* argv[])
     cout << "Connecting to server: ";
 
     if ((ret = mbedtls_net_connect(&server_fd, server_address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-    {
-        cout << "failed: mbedtls_net_connect() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_net_connect() returned " + to_string(ret));
 
     cout << "success" << endl;
 
@@ -108,11 +102,9 @@ int main(int argc, char* argv[])
      */
     cout << "Setting up the DTLS structure: ";
 
-    if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_config_defaults() returned " << ret << endl;
-        goto exit;
-    }
+    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    if (ret != 0)
+        throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret));
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
@@ -123,19 +115,12 @@ int main(int argc, char* argv[])
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_setup() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret));
 
     if ((ret = mbedtls_ssl_set_hostname(&ssl, "localhost")) != 0)
-    {
-        cout << "failed: mbedtls_ssl_set_hostname() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_set_hostname() returned " + to_string(ret));
 
     mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
@@ -150,10 +135,7 @@ int main(int argc, char* argv[])
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret != 0)
-    {
-        cout << "failed: mbedtls_ssl_handshake() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_handshake() returned " + to_string(ret));
 
     cout << "success" << endl;
 
@@ -168,23 +150,20 @@ int main(int argc, char* argv[])
     if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
     {
         char vrfy_buf[512];
-
-        cout << "failed: ";
-
         mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", flags);
 
-        cout << vrfy_buf << endl;
+        throw runtime_error(vrfy_buf);
     }
-    else
-        cout << "success" << endl;
+
+    cout << "success" << endl;
 
     /*
      * 6. Write the echo request
      */
     send_request:
     cout << "Sending to server: ";
-    for(unsigned char i  = 0; i < 10; ++i)
-        buf[i] = i + i*0x10;
+    for (unsigned char i = 0; i < 10; ++i)
+        buf[i] = i + i * 0x10;
 
     len = 10;
 
@@ -193,10 +172,7 @@ int main(int argc, char* argv[])
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret < 0)
-    {
-        cout << "failed: mbedtls_ssl_write() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_write() returned " + to_string(ret));
 
     len = ret;
     cout << "Sent to server (" << len << " bytes): ";
@@ -235,8 +211,7 @@ int main(int argc, char* argv[])
                 goto close_notify;
 
             default:
-                cout << "mbedtls_ssl_read() returned " << ret << endl;
-                goto exit;
+                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret));
         }
     }
 
@@ -283,15 +258,16 @@ int main(int argc, char* argv[])
     mbedtls_ssl_config_free(&conf);
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+}
 
-#if defined(_WIN32)
-    cout << "Press Enter to exit" << endl;
-    getchar();
-#endif
-
-    /* Shell can not handle large exit numbers -> 1 for errors */
-    if (ret < 0)
-        ret = 1;
-
-    return (ret);
+int main(int argc, char* argv[])
+{
+    try
+    {
+        work();
+    }
+    catch (exception& e)
+    {
+        cout << "fail: " << e.what() << endl;
+    }
 }
