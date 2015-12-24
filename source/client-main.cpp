@@ -32,6 +32,14 @@ static void my_debug(void* ctx, int level,
     cout << file << ":" << line << ": " << str << endl;
 }
 
+string stringFromCode(int code)
+{
+    char buffer[100];
+    mbedtls_strerror(code, buffer, 100);
+
+    return string(buffer);
+}
+
 void work()
 {
     int ret, len;
@@ -67,7 +75,7 @@ void work()
 
     mbedtls_entropy_init(&entropy);
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-        throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -78,7 +86,7 @@ void work()
 
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
-        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret));
+        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success (" << ret << " skipped)" << endl;
 
@@ -93,7 +101,7 @@ void work()
     cout << "Connecting to server: ";
 
     if ((ret = mbedtls_net_connect(&server_fd, server_address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-        throw runtime_error("mbedtls_net_connect() returned " + to_string(ret));
+        throw runtime_error("mbedtls_net_connect() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -104,7 +112,7 @@ void work()
 
     ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
-        throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
@@ -115,10 +123,10 @@ void work()
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-        throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     if ((ret = mbedtls_ssl_set_hostname(&ssl, "localhost")) != 0)
-        throw runtime_error("mbedtls_ssl_set_hostname() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ssl_set_hostname() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
@@ -135,7 +143,7 @@ void work()
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret != 0)
-        throw runtime_error("mbedtls_ssl_handshake() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ssl_handshake() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -172,7 +180,7 @@ void work()
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret < 0)
-        throw runtime_error("mbedtls_ssl_write() returned " + to_string(ret));
+        throw runtime_error("mbedtls_ssl_write() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     len = ret;
     cout << "Sent to server (" << len << " bytes): ";
@@ -211,7 +219,7 @@ void work()
                 goto close_notify;
 
             default:
-                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret));
+                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret) + " - " + stringFromCode(ret));
         }
     }
 
@@ -241,15 +249,6 @@ void work()
      * 9. Final clean-ups and exit
      */
     exit:
-
-#ifdef MBEDTLS_ERROR_C
-    if (ret != 0)
-    {
-        char error_buf[100];
-        mbedtls_strerror(ret, error_buf, 100);
-        cout << "Last error was: " << ret << " - " << error_buf << endl;
-    }
-#endif
 
     mbedtls_net_free(&server_fd);
 
