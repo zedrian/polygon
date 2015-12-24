@@ -82,28 +82,16 @@ void initialize()
     cout << "success (" << ret << " skipped)" << endl;
 }
 
-void work()
+void connect(const string address,
+             unsigned int port)
 {
-    int ret, len;
-    uint32_t flags;
-    vector<unsigned char> buf(1024, 0x00);
-    int retry_left = 5;
-    string server_address;
-    mbedtls_timing_delay_context timer;
-
-    initialize();
-    /*
-     * 1. Start the connection
-     */
-    cout << "Enter server IP: ";
-    cin >> server_address;
-    cout << "Enter server port: ";
-    unsigned int port;
-    cin >> port;
+    int ret;
     cout << "Connecting to server: ";
 
-    if ((ret = mbedtls_net_connect(&server_fd, server_address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
+    if ((ret = mbedtls_net_connect(&server_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
+    {
         throw runtime_error("mbedtls_net_connect() returned " + to_string(ret) + " - " + stringFromCode(ret));
+    }
 
     cout << "success" << endl;
 
@@ -114,7 +102,9 @@ void work()
 
     ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
+    {
         throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret) + " - " + stringFromCode(ret));
+    }
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
@@ -125,11 +115,16 @@ void work()
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+    {
         throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
+    }
 
     if ((ret = mbedtls_ssl_set_hostname(&ssl, "localhost")) != 0)
+    {
         throw runtime_error("mbedtls_ssl_set_hostname() returned " + to_string(ret) + " - " + stringFromCode(ret));
+    }
 
+    mbedtls_timing_delay_context timer;
     mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
@@ -141,11 +136,15 @@ void work()
     cout << "Performing the SSL/TLS handshake: ";
 
     do
+    {
         ret = mbedtls_ssl_handshake(&ssl);
+    }
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret != 0)
+    {
         throw runtime_error("mbedtls_ssl_handshake() returned " + to_string(ret) + " - " + stringFromCode(ret));
+    }
 
     cout << "success" << endl;
 
@@ -157,6 +156,7 @@ void work()
     /* In real life, we would have used MBEDTLS_SSL_VERIFY_REQUIRED so that the
      * handshake would not succeed if the peer's cert is bad.  Even if we used
      * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
+    uint32_t flags;
     if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
     {
         char vrfy_buf[512];
@@ -166,6 +166,28 @@ void work()
     }
 
     cout << "success" << endl;
+
+}
+
+void work()
+{
+    int ret, len;
+
+    vector<unsigned char> buf(1024, 0x00);
+    int retry_left = 5;
+
+    initialize();
+    /*
+     * 1. Start the connection
+     */
+    string server_address;
+    unsigned int port;
+    cout << "Enter server IP: ";
+    cin >> server_address;
+    cout << "Enter server port: ";
+    cin >> port;
+
+    connect(server_address, port);
 
     /*
      * 6. Write the echo request
