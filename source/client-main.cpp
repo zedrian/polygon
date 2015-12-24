@@ -47,17 +47,9 @@ mbedtls_ssl_config conf;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 
-void work()
+void initialize()
 {
-
-    int ret, len;
-    uint32_t flags;
-    vector<unsigned char> buf(1024, 0x00);
-    string personalizating_vector = "dtls_client";
-    int retry_left = 5;
-    string server_address;
-    mbedtls_timing_delay_context timer;
-
+    int ret;
     mbedtls_debug_set_threshold(0);
 
     /*
@@ -72,6 +64,7 @@ void work()
     cout << "Seeding the random number generator: ";
 
     mbedtls_entropy_init(&entropy);
+    string personalizating_vector = "dtls_client";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
         throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
@@ -87,7 +80,18 @@ void work()
         throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success (" << ret << " skipped)" << endl;
+}
 
+void work()
+{
+    int ret, len;
+    uint32_t flags;
+    vector<unsigned char> buf(1024, 0x00);
+    int retry_left = 5;
+    string server_address;
+    mbedtls_timing_delay_context timer;
+
+    initialize();
     /*
      * 1. Start the connection
      */
@@ -239,13 +243,8 @@ void work()
     /* No error checking, the connection might be closed already */
     do ret = mbedtls_ssl_close_notify(&ssl);
     while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-    ret = 0;
 
     cout << "success" << endl;
-
-    /*
-     * 9. Final clean-ups and exit
-     */
 }
 
 void release()
