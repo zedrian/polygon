@@ -45,6 +45,7 @@ mbedtls_ssl_config conf;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 
+
 void initialize()
 {
     int ret;
@@ -167,12 +168,74 @@ void connect(const string address,
 
 }
 
+int send(const vector<unsigned char>& data)
+{
+    int bytes_sent;
+    do
+        bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
+    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    if (bytes_sent < 0)
+        throw runtime_error("mbedtls_ssl_write() returned " + to_string(bytes_sent) + " - " + stringFromCode(bytes_sent));
+
+    return bytes_sent;
+}
+
+void sendWithConfirmation(const vector<unsigned char>& data)
+{
+    int ret;
+    auto response = vector<unsigned char>(data.size(), 0x00);
+
+    while(true)
+    {
+        ret = send(data);
+
+        cout << "Sent to server (" << ret << " bytes): ";
+        for (int i = 0; i < ret; ++i)
+        {
+            unsigned short x = data[i];
+            cout << hex << x << " ";
+        }
+        cout << endl;
+
+        /*
+         * 7. Read the echo response
+         */
+        cout << "Receiving from server: ";
+        do
+            ret = mbedtls_ssl_read(&ssl, response.data(), response.size());
+        while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+        if(ret > 0)
+            break;
+
+        switch(ret)
+        {
+            case MBEDTLS_ERR_SSL_TIMEOUT:
+                cout << "timeout" << endl;
+                break;
+
+            case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+                cout << "connection was closed gracefully" << endl;
+                return;
+
+            default:
+                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        }
+    }
+
+    cout << "Received from server (" << dec << ret << " bytes): ";
+    for (int i = 0; i < ret; ++i)
+    {
+        unsigned short x = response[i];
+        cout << hex << x << " ";
+    }
+    cout << endl;
+}
+
 void work()
 {
-    int ret, len;
-
-    vector<unsigned char> buf(1024, 0x00);
-    int retry_left = 5;
+    int ret;
 
     initialize();
     /*
@@ -190,74 +253,15 @@ void work()
     /*
      * 6. Write the echo request
      */
-    send_request:
     cout << "Sending to server: ";
+    vector<unsigned char> data(10, 0x00);
     for (unsigned char i = 0; i < 10; ++i)
-        buf[i] = i + i * 0x10;
-
-    len = 10;
-
-    do
-        ret = mbedtls_ssl_write(&ssl, buf.data(), len);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (ret < 0)
-        throw runtime_error("mbedtls_ssl_write() returned " + to_string(ret) + " - " + stringFromCode(ret));
-
-    len = ret;
-    cout << "Sent to server (" << len << " bytes): ";
-    for (int i = 0; i < len; ++i)
-    {
-        unsigned short x = buf[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
-
-    /*
-     * 7. Read the echo response
-     */
-    cout << "Receiving from server: ";
-
-    len = sizeof(buf) - 1;
-    buf = vector<unsigned char>(len, 0x00);
-
-    do
-        ret = mbedtls_ssl_read(&ssl, buf.data(), len);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (ret <= 0)
-    {
-        switch (ret)
-        {
-            case MBEDTLS_ERR_SSL_TIMEOUT:
-                cout << "timeout" << endl;
-                if (retry_left-- > 0)
-                    goto send_request;
-                return;
-
-            case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                cout << "connection was closed gracefully" << endl;
-                ret = 0;
-                goto close_notify;
-
-            default:
-                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret) + " - " + stringFromCode(ret));
-        }
-    }
-
-    len = ret;
-    cout << "Received from server (" << dec << len << " bytes): ";
-    for (int i = 0; i < len; ++i)
-    {
-        unsigned short x = buf[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
+        data[i] = i + i * 0x10;
+    sendWithConfirmation(data);
 
     /*
      * 8. Done, cleanly close the connection
      */
-    close_notify:
     cout << "Closing the connection: ";
 
     /* No error checking, the connection might be closed already */
