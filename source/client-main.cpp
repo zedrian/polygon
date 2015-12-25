@@ -1,9 +1,7 @@
 #include <iomanip>
 #include <iostream>
 #include <vector>
-#include <stdexcept>
 
-#include <mbedtls/platform.h>
 #include <mbedtls/net.h>
 #include <mbedtls/entropy.h>
 #include <mbedtls/ctr_drbg.h>
