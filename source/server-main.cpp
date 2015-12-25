@@ -53,18 +53,9 @@ mbedtls_ctr_drbg_context ctr_drbg;
 mbedtls_ssl_cache_context cache;
 
 
-void work()
+void initialize()
 {
-    int ret, len;
-
-    vector<unsigned char> buf(1024, 0x00);
-    string personalizating_vector = "dtls_server";
-    unsigned char client_ip[16] = {0};
-    size_t cliip_len;
-    string listening_address;
-
-
-    mbedtls_timing_delay_context timer;
+    int ret;
 
     mbedtls_net_init(&listen_fd);
     mbedtls_net_init(&client_fd);
@@ -109,6 +100,7 @@ void work()
      * 2. Setup the "listening" UDP socket
      */
     cout << "Enter listening address: ";
+    string listening_address;
     cin >> listening_address;
     cout << "Enter port: ";
     unsigned int port;
@@ -125,6 +117,7 @@ void work()
      */
     cout << "Seeding the random number generator: ";
 
+    string personalizating_vector = "dtls_server";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
         throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
@@ -155,9 +148,21 @@ void work()
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
         throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
+    mbedtls_timing_delay_context timer;
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
+}
+
+void work()
+{
+    int ret, len;
+
+    vector<unsigned char> buf(1024, 0x00);
+    unsigned char client_ip[16] = {0};
+    size_t cliip_len;
+
+    initialize();
 
     reset:
     mbedtls_net_free(&client_fd);
