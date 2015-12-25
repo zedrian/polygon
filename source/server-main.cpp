@@ -41,36 +41,37 @@ string stringFromCode(int code)
     return string(buffer);
 }
 
+
+mbedtls_net_context listen_fd, client_fd;
+mbedtls_x509_crt srvcert;
+mbedtls_ssl_context ssl;
+mbedtls_ssl_config conf;
+mbedtls_pk_context pkey;
+mbedtls_ssl_cookie_ctx cookie_ctx;
+mbedtls_entropy_context entropy;
+mbedtls_ctr_drbg_context ctr_drbg;
+mbedtls_ssl_cache_context cache;
+
+
 void work()
 {
     int ret, len;
-    mbedtls_net_context listen_fd, client_fd;
+
     vector<unsigned char> buf(1024, 0x00);
     string personalizating_vector = "dtls_server";
     unsigned char client_ip[16] = {0};
     size_t cliip_len;
-    mbedtls_ssl_cookie_ctx cookie_ctx;
     string listening_address;
 
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
-    mbedtls_x509_crt srvcert;
-    mbedtls_pk_context pkey;
+
     mbedtls_timing_delay_context timer;
-#if defined(MBEDTLS_SSL_CACHE_C)
-    mbedtls_ssl_cache_context cache;
-#endif
 
     mbedtls_net_init(&listen_fd);
     mbedtls_net_init(&client_fd);
     mbedtls_ssl_init(&ssl);
     mbedtls_ssl_config_init(&conf);
     mbedtls_ssl_cookie_init(&cookie_ctx);
-#if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_init(&cache);
-#endif
     mbedtls_x509_crt_init(&srvcert);
     mbedtls_pk_init(&pkey);
     mbedtls_entropy_init(&entropy);
@@ -140,9 +141,7 @@ void work()
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
 
-#if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_conf_session_cache(&conf, &cache, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
-#endif
 
     mbedtls_ssl_conf_ca_chain(&conf, srvcert.next, NULL);
     if ((ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &pkey)) != 0)
@@ -278,21 +277,11 @@ void work()
     cout << "success" << endl;
 
     goto reset;
+}
 
-    /*
-     * Final clean-ups and exit
-     */
-    exit:
-
-#ifdef MBEDTLS_ERROR_C
-    if (ret != 0)
-    {
-        char error_buf[100];
-        mbedtls_strerror(ret, error_buf, 100);
-        cout << "Last error was: " << ret << " - " << error_buf << endl;
-    }
-#endif
-
+void release()
+{
+    cout << "Release: ";
     mbedtls_net_free(&client_fd);
     mbedtls_net_free(&listen_fd);
 
@@ -301,11 +290,10 @@ void work()
     mbedtls_ssl_free(&ssl);
     mbedtls_ssl_config_free(&conf);
     mbedtls_ssl_cookie_free(&cookie_ctx);
-#if defined(MBEDTLS_SSL_CACHE_C)
     mbedtls_ssl_cache_free(&cache);
-#endif
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+    cout << "success" << endl;
 }
 
 
@@ -319,4 +307,5 @@ int main(int argc, char** argv)
     {
         cout << "fail: " << e.what() << endl;
     }
+    release();
 }
