@@ -22,6 +22,8 @@ using std::endl;
 using std::to_string;
 using std::hex;
 using std::dec;
+using std::runtime_error;
+using std::exception;
 
 
 static void my_debug(void* ctx, int level,
@@ -31,7 +33,15 @@ static void my_debug(void* ctx, int level,
     cout << file << ":" << line << ": " << str << endl;
 }
 
-int main(int argc, char** argv)
+string stringFromCode(int code)
+{
+    char buffer[100];
+    mbedtls_strerror(code, buffer, 100);
+
+    return string(buffer);
+}
+
+void work()
 {
     int ret, len;
     mbedtls_net_context listen_fd, client_fd;
@@ -82,24 +92,15 @@ int main(int argc, char** argv)
      */
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_srv_crt, mbedtls_test_srv_crt_len);
     if (ret != 0)
-    {
-        cout << "failed: mbedtls_x509_crt_parse() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret != 0)
-    {
-        cout << "failed: mbedtls_x509_crt_parse() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*) mbedtls_test_srv_key, mbedtls_test_srv_key_len, NULL, 0);
     if (ret != 0)
-    {
-        cout << "failed: mbedtls_pk_parse_key() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_pk_parse_key() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -114,10 +115,7 @@ int main(int argc, char** argv)
     cout << "Binding on UDP: ";
 
     if ((ret = mbedtls_net_bind(&listen_fd, listening_address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-    {
-        cout << "failed: mbedtls_net_bind() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_net_bind() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -127,10 +125,7 @@ int main(int argc, char** argv)
     cout << "Seeding the random number generator: ";
 
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-    {
-        cout << "failed: mbedtls_ctr_drbg_seed() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     cout << "success" << endl;
 
@@ -140,10 +135,7 @@ int main(int argc, char** argv)
     cout << "Setting up the DTLS data: ";
 
     if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_config_defaults() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
@@ -154,41 +146,22 @@ int main(int argc, char** argv)
 
     mbedtls_ssl_conf_ca_chain(&conf, srvcert.next, NULL);
     if ((ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &pkey)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_conf_own_cert() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_conf_own_cert() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     if ((ret = mbedtls_ssl_cookie_setup(&cookie_ctx, mbedtls_ctr_drbg_random, &ctr_drbg)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_cookie_setup() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_cookie_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     mbedtls_ssl_conf_dtls_cookies(&conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cookie_ctx);
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_setup() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
 
     reset:
-#ifdef MBEDTLS_ERROR_C
-    if (ret != 0)
-    {
-        char error_buf[100];
-        mbedtls_strerror(ret, error_buf, 100);
-        cout << "Last error was: " << ret << " - " << error_buf << endl;
-    }
-#endif
-
     mbedtls_net_free(&client_fd);
-
     mbedtls_ssl_session_reset(&ssl);
 
     /*
@@ -197,17 +170,11 @@ int main(int argc, char** argv)
     cout << "Waiting for a remote connection: ";
 
     if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
-    {
-        cout << "failed: mbedtls_net_accept() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_net_accept() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     /* For HelloVerifyRequest cookies */
     if ((ret = mbedtls_ssl_set_client_transport_id(&ssl, client_ip, cliip_len)) != 0)
-    {
-        cout << "failed: mbedtls_ssl_set_client_transport_id() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_set_client_transport_id() returned " + to_string(ret) + " - " + stringFromCode(ret));
 
     mbedtls_ssl_set_bio(&ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
@@ -225,12 +192,11 @@ int main(int argc, char** argv)
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
     {
         cout << "hello verification requested" << endl;
-        ret = 0;
         goto reset;
     }
     else if (ret != 0)
     {
-        cout << "failed: mbedtls_ssl_handshake() returned " << ret << endl;
+        cout << "failed: mbedtls_ssl_handshake() returned " << ret << " - " << stringFromCode(ret) << endl;
         goto reset;
     }
 
@@ -284,12 +250,9 @@ int main(int argc, char** argv)
     do
         ret = mbedtls_ssl_write(&ssl, buf.data(), len);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
     if (ret < 0)
-    {
-        cout << "failed: mbedtls_ssl_write() returned " << ret << endl;
-        goto exit;
-    }
+        throw runtime_error("mbedtls_ssl_write() returned " + to_string(ret) + " - " + stringFromCode(ret));
+
     cout << "success" << endl;
 
     len = ret;
@@ -343,16 +306,17 @@ int main(int argc, char** argv)
 #endif
     mbedtls_ctr_drbg_free(&ctr_drbg);
     mbedtls_entropy_free(&entropy);
+}
 
-#if defined(_WIN32)
-    cout << "Press Enter to exit this program." << endl;
-    fflush(stdout);
-    getchar();
-#endif
 
-    /* Shell can not handle large exit numbers -> 1 for errors */
-    if (ret < 0)
-        ret = 1;
-
-    return (ret);
+int main(int argc, char** argv)
+{
+    try
+    {
+        work();
+    }
+    catch (exception& e)
+    {
+        cout << "fail: " << e.what() << endl;
+    }
 }
