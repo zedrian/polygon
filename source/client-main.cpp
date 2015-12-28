@@ -183,15 +183,15 @@ int send(const vector<unsigned char>& data)
 
 void sendWithConfirmation(const vector<unsigned char>& data)
 {
-    int ret;
+    int bytes_received, bytes_sent;
     auto response = vector<unsigned char>(data.size(), 0x00);
 
     while(true)
     {
-        ret = send(data);
+        bytes_sent = send(data);
 
-        cout << "Sent to server (" << dec << ret << " bytes): ";
-        for (int i = 0; i < ret; ++i)
+        cout << "Sent to server (" << dec << bytes_sent << " bytes): ";
+        for (int i = 0; i < bytes_sent; ++i)
         {
             unsigned short x = data[i];
             cout << hex << x << " ";
@@ -203,13 +203,13 @@ void sendWithConfirmation(const vector<unsigned char>& data)
          */
         cout << "Receiving from server: ";
         do
-            ret = mbedtls_ssl_read(&ssl, response.data(), response.size());
-        while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+            bytes_received = mbedtls_ssl_read(&ssl, response.data(), response.size());
+        while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-        if(ret > 0)
+        if(bytes_received > 0)
             break;
 
-        switch(ret)
+        switch(bytes_received)
         {
             case MBEDTLS_ERR_SSL_TIMEOUT:
                 cout << "timeout" << endl;
@@ -220,12 +220,12 @@ void sendWithConfirmation(const vector<unsigned char>& data)
                 return;
 
             default:
-                throw runtime_error("mbedtls_ssl_read() returned " + to_string(ret) + " - " + stringFromCode(ret));
+                throw runtime_error("mbedtls_ssl_read() returned " + to_string(bytes_received) + " - " + stringFromCode(bytes_received));
         }
     }
 
-    cout << "Received from server (" << dec << ret << " bytes): ";
-    for (int i = 0; i < ret; ++i)
+    cout << "Received from server (" << dec << bytes_received << " bytes): ";
+    for (int i = 0; i < bytes_received; ++i)
     {
         unsigned short x = response[i];
         cout << hex << x << " ";
