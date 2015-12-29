@@ -190,7 +190,7 @@ void sendWithConfirmation(const vector<unsigned char>& data)
     {
         bytes_sent = send(data);
 
-        cout << "Sent to server (" << dec << bytes_sent << " bytes): ";
+        cout << endl << "Sent to server (" << dec << bytes_sent << " bytes): ";
         for (int i = 0; i < bytes_sent; ++i)
         {
             unsigned short x = data[i];
@@ -224,7 +224,7 @@ void sendWithConfirmation(const vector<unsigned char>& data)
         }
     }
 
-    cout << "Received from server (" << dec << bytes_received << " bytes): ";
+    cout << endl << "Received from server (" << dec << bytes_received << " bytes): ";
     for (int i = 0; i < bytes_received; ++i)
     {
         unsigned short x = response[i];
