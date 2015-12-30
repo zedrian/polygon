@@ -30,12 +30,13 @@ static void my_debug(void* ctx, int level,
     cout << file << ":" << line << ": " << str << endl;
 }
 
-string stringFromCode(int code)
+string constructErrorMessage(string command,
+                             int code)
 {
     char buffer[100];
-    mbedtls_strerror(code, buffer, 100);
+	mbedtls_strerror(code, buffer, 100);
 
-    return string(buffer);
+	return command + " failed with error code " + to_string(code) + " - " buffer;
 }
 
 mbedtls_net_context server_fd;
@@ -65,7 +66,7 @@ void initialize()
     mbedtls_entropy_init(&entropy);
     string personalizating_vector = "dtls_client";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-        throw runtime_error("mbedtls_ctr_drbg_seed() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
 
     cout << "success" << endl;
 
@@ -76,7 +77,7 @@ void initialize()
 
     ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
-        throw runtime_error("mbedtls_x509_crt_parse() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     cout << "success (" << ret << " skipped)" << endl;
 }
@@ -89,7 +90,7 @@ void connect(const string address,
 
     if ((ret = mbedtls_net_connect(&server_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
     {
-        throw runtime_error("mbedtls_net_connect() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_net_connect()", ret));
     }
 
     cout << "success" << endl;
@@ -102,7 +103,7 @@ void connect(const string address,
     ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
     {
-        throw runtime_error("mbedtls_ssl_config_defaults() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
     }
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
@@ -115,12 +116,12 @@ void connect(const string address,
 
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
     {
-        throw runtime_error("mbedtls_ssl_setup() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
     }
 
     if ((ret = mbedtls_ssl_set_hostname(&ssl, "localhost")) != 0)
     {
-        throw runtime_error("mbedtls_ssl_set_hostname() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", ret));
     }
 
     mbedtls_timing_delay_context timer;
@@ -142,7 +143,7 @@ void connect(const string address,
 
     if (ret != 0)
     {
-        throw runtime_error("mbedtls_ssl_handshake() returned " + to_string(ret) + " - " + stringFromCode(ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_handshake()", ret));
     }
 
     cout << "success" << endl;
@@ -176,7 +177,7 @@ int send(const vector<unsigned char>& data)
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_sent < 0)
-        throw runtime_error("mbedtls_ssl_write() returned " + to_string(bytes_sent) + " - " + stringFromCode(bytes_sent));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", ret));
 
     return bytes_sent;
 }
@@ -220,7 +221,7 @@ void sendWithConfirmation(const vector<unsigned char>& data)
                 return;
 
             default:
-                throw runtime_error("mbedtls_ssl_read() returned " + to_string(bytes_received) + " - " + stringFromCode(bytes_received));
+                throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", ret));
         }
     }
 
