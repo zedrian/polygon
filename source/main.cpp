@@ -1,5 +1,8 @@
 #include <iostream>
 
+#include <ft2build.h>
+#include <freetype.h>
+
 
 using std::cout;
 using std::endl;
@@ -7,5 +10,12 @@ using std::endl;
 
 int main()
 {
-    cout << "Here is a polygon on it's MASTER branch. By default it's doing nothing but showing this message." << endl;
+    FT_Library library;
+    auto error = FT_Init_FreeType(&library);
+    if(error)
+    {
+        cout << "Failed to init FreeType library." << endl;
+        return -1;
+    }
+    cout << "FreeType library initialization succeeded." << endl;
 }
