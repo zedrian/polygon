@@ -1,7 +1,7 @@
 #include <iostream>
 
 #include <ft2build.h>
-#include <freetype.h>
+#include <freetype/freetype.h>
 
 
 using std::cout;
