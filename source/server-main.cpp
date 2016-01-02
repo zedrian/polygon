@@ -39,7 +39,7 @@ string constructErrorMessage(string command,
     char buffer[100];
 	mbedtls_strerror(code, buffer, 100);
 
-	return command + " failed with error code " + to_string(code) + " - " buffer;
+	return command + " failed with error code " + to_string(code) + " - " + buffer;
 }
 
 

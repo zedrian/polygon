@@ -36,7 +36,7 @@ string constructErrorMessage(string command,
     char buffer[100];
 	mbedtls_strerror(code, buffer, 100);
 
-	return command + " failed with error code " + to_string(code) + " - " buffer;
+	return command + " failed with error code " + to_string(code) + " - " + buffer;
 }
 
 mbedtls_net_context server_fd;
@@ -177,7 +177,7 @@ int send(const vector<unsigned char>& data)
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_sent < 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
 
     return bytes_sent;
 }
@@ -221,7 +221,7 @@ void sendWithConfirmation(const vector<unsigned char>& data)
                 return;
 
             default:
-                throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", ret));
+                throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
         }
     }
 
