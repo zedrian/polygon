@@ -3,6 +3,7 @@ find_path(mbedTLS_INCLUDE_DIR
 	PATHS
 		"$ENV{PROGRAMFILES}/mbed TLS"
 		"$ENV{PROGRAMW6432}/mbed TLS"
+		/usr/local
 	PATH_SUFFIXES include)
 
 find_library(mbedTLS_LIBRARY
@@ -10,6 +11,7 @@ find_library(mbedTLS_LIBRARY
 	 PATHS
 		"$ENV{PROGRAMFILES}/mbed TLS"
 		"$ENV{PROGRAMW6432}/mbed TLS"
+		/usr/local
 	 PATH_SUFFIXES lib)
 
 find_library(mbedCRYPTO_LIBRARY
@@ -17,6 +19,7 @@ find_library(mbedCRYPTO_LIBRARY
 	 PATHS
 		"$ENV{PROGRAMFILES}/mbed TLS"
 		"$ENV{PROGRAMW6432}/mbed TLS"
+		/usr/local
 	 PATH_SUFFIXES lib)
 
 find_library(mbedX509_LIBRARY
@@ -24,6 +27,7 @@ find_library(mbedX509_LIBRARY
 	 PATHS
 		"$ENV{PROGRAMFILES}/mbed TLS"
 		"$ENV{PROGRAMW6432}/mbed TLS"
+		/usr/local
 	 PATH_SUFFIXES lib)
 
 if(mbedTLS_INCLUDE_DIR AND mbedTLS_LIBRARY)
