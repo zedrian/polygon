@@ -37,9 +37,9 @@ string constructErrorMessage(string command,
                              int code)
 {
     char buffer[100];
-	mbedtls_strerror(code, buffer, 100);
+    mbedtls_strerror(code, buffer, 100);
 
-	return command + " failed with error code " + to_string(code) + " - " + buffer;
+    return command + " failed with error code " + to_string(code) + " - " + buffer;
 }
 
 
@@ -98,22 +98,6 @@ void initialize()
     cout << "success" << endl;
 
     /*
-     * 2. Setup the "listening" UDP socket
-     */
-    cout << "Enter listening address: ";
-    string listening_address;
-    cin >> listening_address;
-    cout << "Enter port: ";
-    unsigned int port;
-    cin >> port;
-    cout << "Binding on UDP: ";
-
-    if ((ret = mbedtls_net_bind(&listen_fd, listening_address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_net_bind()", ret));
-
-    cout << "success" << endl;
-
-    /*
      * 3. Seed the RNG
      */
     cout << "Seeding the random number generator: ";
@@ -155,6 +139,18 @@ void initialize()
     cout << "success" << endl;
 }
 
+void bind(string address,
+          unsigned short port)
+{
+    cout << "Binding on UDP: ";
+
+    int ret;
+    if ((ret = mbedtls_net_bind(&listen_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_net_bind()", ret));
+
+    cout << "success" << endl;
+}
+
 void work()
 {
     int ret, len;
@@ -164,6 +160,17 @@ void work()
     size_t cliip_len;
 
     initialize();
+
+    /*
+     * 2. Setup the "listening" UDP socket
+     */
+    cout << "Enter listening address: ";
+    string listening_address;
+    cin >> listening_address;
+    cout << "Enter port: ";
+    unsigned short port;
+    cin >> port;
+    bind(listening_address, port);
 
     reset:
     mbedtls_net_free(&client_fd);
