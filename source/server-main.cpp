@@ -151,11 +151,25 @@ void bind(string address,
     cout << "success" << endl;
 }
 
+int send(const vector<unsigned char>& data)
+{
+    int bytes_sent;
+    do
+        bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
+    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
+    
+    if (bytes_sent < 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
+
+    return bytes_sent;
+}
+
 void work()
 {
-    int ret, len;
+    int ret, bytes_sent, bytes_received;
 
     vector<unsigned char> buf(1024, 0x00);
+    vector<unsigned char> sending_data;
     unsigned char client_ip[16] = {0};
     size_t cliip_len;
 
@@ -219,10 +233,10 @@ void work()
      */
     cout << "Receiving from client: ";
 
-    len = buf.size() - 1;
+    bytes_received = buf.size() - 1;
 
     do
-        ret = mbedtls_ssl_read(&ssl, buf.data(), len);
+        ret = mbedtls_ssl_read(&ssl, buf.data(), bytes_received);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret <= 0)
@@ -245,10 +259,12 @@ void work()
     }
     cout << "success" << endl;
 
-    len = ret;
-    cout << "Received from client (" << dec << len << " bytes): ";
-    for (int i = 0; i < len; ++i)
+    bytes_received = ret;
+    sending_data = vector<unsigned char>(bytes_received);
+    cout << "Received from client (" << dec << bytes_received << " bytes): ";
+    for (int i = 0; i < bytes_received; ++i)
     {
+        sending_data[i] = buf[i];
         unsigned short x = buf[i];
         cout << hex << x << " ";
     }
@@ -258,18 +274,10 @@ void work()
      * 7. Write the 200 Response
      */
     cout << "Sending to client: ";
-
-    do
-        ret = mbedtls_ssl_write(&ssl, buf.data(), len);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-    if (ret < 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", ret));
-
+    bytes_sent = send(buf);
     cout << "success" << endl;
-
-    len = ret;
-    cout << "Sent to client (" << dec << len << " bytes): ";
-    for (int i = 0; i < len; ++i)
+    cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
+    for (int i = 0; i < bytes_sent; ++i)
     {
         unsigned short x = buf[i];
         cout << hex << x << " ";
