@@ -232,16 +232,13 @@ void work()
      * 6. Read the echo Request
      */
     cout << "Receiving from client: ";
-
-    bytes_received = buf.size() - 1;
-
     do
-        ret = mbedtls_ssl_read(&ssl, buf.data(), bytes_received);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+        bytes_received = mbedtls_ssl_read(&ssl, buf.data(), buf.size());
+    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    if (ret <= 0)
+    if (bytes_received <= 0)
     {
-        switch (ret)
+        switch (bytes_received)
         {
             case MBEDTLS_ERR_SSL_TIMEOUT:
                 cout << "timeout" << endl;
@@ -249,17 +246,15 @@ void work()
 
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                 cout << "connection was closed gracefully" << endl;
-                ret = 0;
                 goto close_notify;
 
             default:
-                cout << "mbedtls_ssl_read() returned " << ret << endl;
+                cout << "mbedtls_ssl_read() returned " << bytes_received << endl;
                 goto reset;
         }
     }
     cout << "success" << endl;
 
-    bytes_received = ret;
     sending_data = vector<unsigned char>(bytes_received);
     cout << "Received from client (" << dec << bytes_received << " bytes): ";
     for (int i = 0; i < bytes_received; ++i)
