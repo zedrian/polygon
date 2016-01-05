@@ -157,7 +157,7 @@ int send(const vector<unsigned char>& data)
     do
         bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
-    
+
     if (bytes_sent < 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
 
@@ -274,7 +274,7 @@ void work()
      * 7. Write the 200 Response
      */
     cout << "Sending to client: ";
-    bytes_sent = send(buf);
+    bytes_sent = send(sending_data);
     cout << "success" << endl;
     cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
     for (int i = 0; i < bytes_sent; ++i)
