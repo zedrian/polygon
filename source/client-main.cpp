@@ -246,12 +246,8 @@ void close()
 
 void work()
 {
-    int ret;
-
     initialize();
-    /*
-     * 1. Start the connection
-     */
+
     string server_address;
     unsigned int port;
     cout << "Enter server IP: ";
@@ -261,18 +257,12 @@ void work()
 
     connect(server_address, port);
 
-    /*
-     * 6. Write the echo request
-     */
     cout << "Sending to server: ";
     vector<unsigned char> data(10, 0x00);
     for (unsigned char i = 0; i < 10; ++i)
         data[i] = i + i * 0x10;
     sendWithConfirmation(data);
 
-    /*
-     * 8. Done, cleanly close the connection
-     */
     cout << "Closing the connection: ";
     close();
     cout << "success" << endl;
