@@ -34,9 +34,9 @@ string constructErrorMessage(string command,
                              int code)
 {
     char buffer[100];
-	mbedtls_strerror(code, buffer, 100);
+    mbedtls_strerror(code, buffer, 100);
 
-	return command + " failed with error code " + to_string(code) + " - " + buffer;
+    return command + " failed with error code " + to_string(code) + " - " + buffer;
 }
 
 mbedtls_net_context server_fd;
@@ -187,7 +187,7 @@ void sendWithConfirmation(const vector<unsigned char>& data)
     int bytes_received, bytes_sent;
     auto response = vector<unsigned char>(data.size(), 0x00);
 
-    while(true)
+    while (true)
     {
         bytes_sent = send(data);
 
@@ -207,10 +207,10 @@ void sendWithConfirmation(const vector<unsigned char>& data)
             bytes_received = mbedtls_ssl_read(&ssl, response.data(), response.size());
         while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-        if(bytes_received > 0)
+        if (bytes_received > 0)
             break;
 
-        switch(bytes_received)
+        switch (bytes_received)
         {
             case MBEDTLS_ERR_SSL_TIMEOUT:
                 cout << "timeout" << endl;
@@ -232,6 +232,16 @@ void sendWithConfirmation(const vector<unsigned char>& data)
         cout << hex << x << " ";
     }
     cout << endl;
+}
+
+void close()
+{
+    int ret;
+
+    /* No error checking, the connection might be closed already */
+    do
+        ret = mbedtls_ssl_close_notify(&ssl);
+    while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
 }
 
 void work()
@@ -264,11 +274,7 @@ void work()
      * 8. Done, cleanly close the connection
      */
     cout << "Closing the connection: ";
-
-    /* No error checking, the connection might be closed already */
-    do ret = mbedtls_ssl_close_notify(&ssl);
-    while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
+    close();
     cout << "success" << endl;
 }
 
