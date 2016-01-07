@@ -45,6 +45,7 @@ mbedtls_ssl_context ssl;
 mbedtls_ssl_config conf;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
+size_t maximum_fragment_size;
 
 
 void initialize()
@@ -167,6 +168,8 @@ void connect(const string address,
 
     cout << "success" << endl;
 
+    maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
+    cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
 }
 
 int send(const vector<unsigned char>& data)
