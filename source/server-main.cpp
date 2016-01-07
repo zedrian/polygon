@@ -52,6 +52,7 @@ mbedtls_ssl_cookie_ctx cookie_ctx;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 mbedtls_ssl_cache_context cache;
+size_t maximum_fragment_size;
 
 
 void initialize()
@@ -189,6 +190,7 @@ void work()
     reset:
     mbedtls_net_free(&client_fd);
     mbedtls_ssl_session_reset(&ssl);
+    maximum_fragment_size = 0;
 
     /*
      * 3. Wait until a client connects
@@ -227,6 +229,8 @@ void work()
     }
 
     cout << "success" << endl;
+    maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
+    cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
 
     /*
      * 6. Read the echo Request
