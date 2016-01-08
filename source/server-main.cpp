@@ -69,10 +69,7 @@ void initialize()
     mbedtls_pk_init(&pkey);
     mbedtls_entropy_init(&entropy);
     mbedtls_ctr_drbg_init(&ctr_drbg);
-
-#if defined(MBEDTLS_DEBUG_C)
     mbedtls_debug_set_threshold(0);
-#endif
 
     /*
      * 1. Load the certificates and private RSA key
