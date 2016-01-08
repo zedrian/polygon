@@ -185,27 +185,16 @@ int send(const vector<unsigned char>& data)
     return bytes_sent;
 }
 
-void sendWithConfirmation(const vector<unsigned char>& data)
+vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
 {
     int bytes_received, bytes_sent;
-    auto response = vector<unsigned char>(data.size(), 0x00);
+    auto response = vector<unsigned char>(maximum_fragment_size, 0x00);
 
     while (true)
     {
-        bytes_sent = send(data);
+        send(data);
 
-        cout << endl << "Sent to server (" << dec << bytes_sent << " bytes): ";
-        for (int i = 0; i < bytes_sent; ++i)
-        {
-            unsigned short x = data[i];
-            cout << hex << x << " ";
-        }
-        cout << endl;
-
-        /*
-         * 7. Read the echo response
-         */
-        cout << "Receiving from server: ";
+        cout << "Receiving confirmation from server: ";
         do
             bytes_received = mbedtls_ssl_read(&ssl, response.data(), response.size());
         while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
@@ -221,20 +210,15 @@ void sendWithConfirmation(const vector<unsigned char>& data)
 
             case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
                 cout << "connection was closed gracefully" << endl;
-                return;
+                return vector<unsigned char>();
 
             default:
                 throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
         }
     }
 
-    cout << endl << "Received from server (" << dec << bytes_received << " bytes): ";
-    for (int i = 0; i < bytes_received; ++i)
-    {
-        unsigned short x = response[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
+    response.resize(bytes_received);
+    return response;
 }
 
 void close()
@@ -260,11 +244,29 @@ void work()
 
     connect(server_address, port);
 
-    cout << "Sending to server: ";
     vector<unsigned char> data(10, 0x00);
     for (unsigned char i = 0; i < 10; ++i)
         data[i] = i + i * 0x10;
-    sendWithConfirmation(data);
+
+    cout << "Data to send to server (" << dec << data.size() << " bytes): ";
+    for (int i = 0; i < data.size(); ++i)
+    {
+        unsigned short x = data[i];
+        cout << hex << x << " ";
+    }
+    cout << endl;
+
+    cout << "Sending to server: ";
+    auto response = sendWithConfirmation(data);
+    cout << "success" << endl;
+
+    cout << "Server's response (" << dec << response.size() << " bytes): ";
+    for (int i = 0; i < response.size(); ++i)
+    {
+        unsigned short x = response[i];
+        cout << hex << x << " ";
+    }
+    cout << endl;
 
     cout << "Closing the connection: ";
     close();
