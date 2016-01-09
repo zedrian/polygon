@@ -192,7 +192,9 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
 
     while (true)
     {
+        cout << "Sending to server: ";
         send(data);
+        cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
         do
@@ -216,6 +218,7 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
                 throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
         }
     }
+    cout << "success" << endl;
 
     response.resize(bytes_received);
     return response;
@@ -256,9 +259,7 @@ void work()
     }
     cout << endl;
 
-    cout << "Sending to server: ";
     auto response = sendWithConfirmation(data);
-    cout << "success" << endl;
 
     cout << "Server's response (" << dec << response.size() << " bytes): ";
     for (int i = 0; i < response.size(); ++i)
