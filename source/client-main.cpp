@@ -20,6 +20,7 @@ using std::vector;
 using std::hex;
 using std::dec;
 using std::runtime_error;
+using std::logic_error;
 using std::exception;
 
 
@@ -174,6 +175,9 @@ void connect(const string address,
 
 int send(const vector<unsigned char>& data)
 {
+    if(data.size() > maximum_fragment_size)
+        throw logic_error("Sending data bigger than maximum fragment size is not supported.");
+
     int bytes_sent;
     do
         bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
