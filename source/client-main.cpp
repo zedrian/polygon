@@ -47,6 +47,7 @@ mbedtls_ssl_config conf;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 size_t maximum_fragment_size;
+bool active;
 
 
 void initialize()
@@ -81,6 +82,7 @@ void initialize()
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
+    active = false;
     cout << "success (" << ret << " skipped)" << endl;
 }
 
@@ -167,15 +169,47 @@ void connect(const string address,
         throw runtime_error(vrfy_buf);
     }
 
+    active = true;
     cout << "success" << endl;
 
     maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
     cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
 }
 
+vector<unsigned char> receive() // TODO: add something like a timeout
+{
+    int bytes_received;
+    auto data = vector<unsigned char>(maximum_fragment_size, 0x00);
+
+    do
+        bytes_received = mbedtls_ssl_read(&ssl, data.data(), data.size());
+    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    if (bytes_received > 0)
+    {
+        data.resize(bytes_received);
+        return data;
+    }
+
+    switch (bytes_received)
+    {
+        case MBEDTLS_ERR_SSL_TIMEOUT:
+            cout << "timeout" << endl;
+            return vector<unsigned char>();
+
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+            cout << "connection was closed gracefully" << endl;
+            active = false;
+            return vector<unsigned char>();
+
+        default:
+            throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
+    }
+}
+
 int send(const vector<unsigned char>& data)
 {
-    if(data.size() > maximum_fragment_size)
+    if (data.size() > maximum_fragment_size)
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
     int bytes_sent;
@@ -191,8 +225,7 @@ int send(const vector<unsigned char>& data)
 
 vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
 {
-    int bytes_received, bytes_sent;
-    auto response = vector<unsigned char>(maximum_fragment_size, 0x00);
+    vector<unsigned char> response;
 
     while (true)
     {
@@ -201,32 +234,19 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
         cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
-        do
-            bytes_received = mbedtls_ssl_read(&ssl, response.data(), response.size());
-        while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+        response = receive();
 
-        if (bytes_received > 0)
+        if(response.size() > 0)
             break;
 
-        switch (bytes_received)
-        {
-            case MBEDTLS_ERR_SSL_TIMEOUT:
-                cout << "timeout" << endl;
-                break;
-
-            case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                cout << "connection was closed gracefully" << endl;
-                return vector<unsigned char>();
-
-            default:
-                throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
-        }
+        if(!active)
+            return vector<unsigned char>();
     }
     cout << "success" << endl;
 
-    response.resize(bytes_received);
     return response;
 }
+
 
 void close()
 {
@@ -236,6 +256,8 @@ void close()
     do
         ret = mbedtls_ssl_close_notify(&ssl);
     while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
+
+    active = false;
 }
 
 void work()
