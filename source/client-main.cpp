@@ -24,9 +24,20 @@ using std::logic_error;
 using std::exception;
 
 
-static void my_debug(void* ctx, int level,
-                     const char* file, int line,
-                     const char* str)
+/*
+ * Socket interface :
+ *  size_t& sendTimeout() ?
+ *  size_t& receiveTimeout() ?
+ *  size_t send(const unsigned char* data, size_t size)
+ *  size_t receive(unsigned char* data, size_t maximum_size)
+ *  size_t pendingDatagramSize() ?
+ *  bool hasPendingDatagams() ?
+ */
+
+
+static void my_debug(void *ctx, int level,
+                     const char *file, int line,
+                     const char *str)
 {
     cout << file << ":" << line << ": " << str << endl;
 }
@@ -68,7 +79,9 @@ void initialize()
 
     mbedtls_entropy_init(&entropy);
     string personalizating_vector = "dtls_client";
-    if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
+    if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+                                     (const unsigned char *) personalizating_vector.data(),
+                                     personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
 
     cout << "success" << endl;
@@ -78,7 +91,7 @@ void initialize()
      */
     cout << "Loading the CA root certificate: ";
 
-    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char *) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
@@ -104,7 +117,8 @@ void connect(const string address,
      */
     cout << "Setting up the DTLS structure: ";
 
-    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM,
+                                      MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
     {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
@@ -176,38 +190,35 @@ void connect(const string address,
     cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
 }
 
-vector<unsigned char> receive() // TODO: add something like a timeout
+size_t receive(unsigned char *data,
+               size_t maximum_size) // TODO: add something like a timeout
 {
     int bytes_received;
-    auto data = vector<unsigned char>(maximum_fragment_size, 0x00);
 
     do
-        bytes_received = mbedtls_ssl_read(&ssl, data.data(), data.size());
+        bytes_received = mbedtls_ssl_read(&ssl, data, maximum_size);
     while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_received > 0)
-    {
-        data.resize(bytes_received);
-        return data;
-    }
+        return bytes_received;
 
     switch (bytes_received)
     {
         case MBEDTLS_ERR_SSL_TIMEOUT:
             cout << "timeout" << endl;
-            return vector<unsigned char>();
+            return 0;
 
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
             cout << "connection was closed gracefully" << endl;
             active = false;
-            return vector<unsigned char>();
+            return 0;
 
         default:
             throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
     }
 }
 
-int send(const vector<unsigned char>& data)
+int send(const vector<unsigned char> &data)
 {
     if (data.size() > maximum_fragment_size)
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
@@ -223,9 +234,10 @@ int send(const vector<unsigned char>& data)
     return bytes_sent;
 }
 
-vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
+vector<unsigned char> sendWithConfirmation(const vector<unsigned char> &data)
 {
-    vector<unsigned char> response;
+    vector<unsigned char> response(maximum_fragment_size, 0x00);
+    size_t bytes_received;
 
     while (true)
     {
@@ -234,16 +246,17 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data)
         cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
-        response = receive();
+        bytes_received = receive(response.data(), response.size());
 
-        if(response.size() > 0)
+        if (bytes_received > 0)
             break;
 
-        if(!active)
+        if (!active)
             return vector<unsigned char>();
     }
     cout << "success" << endl;
 
+    response.resize(bytes_received);
     return response;
 }
 
@@ -315,13 +328,13 @@ void release()
 }
 
 
-int main(int argc, char* argv[])
+int main(int argc, char *argv[])
 {
     try
     {
         work();
     }
-    catch (exception& e)
+    catch (exception &e)
     {
         cout << "fail: " << e.what() << endl;
     }
