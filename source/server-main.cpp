@@ -191,6 +191,14 @@ bool accept()
 
     cout << "success" << endl;
 
+    cout << "Client address: ";
+    for(unsigned char i = 0; i < cliip_len - 1; ++i)
+    {
+        unsigned short x = client_ip[i];
+        cout << dec << x << ".";
+    }
+    cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
+
     /*
      * 5. Handshake
      */
