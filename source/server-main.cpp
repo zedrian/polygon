@@ -26,6 +26,14 @@ using std::runtime_error;
 using std::exception;
 
 
+/*
+ * Acceptor interface :
+ *  void listen(address)
+ *  shared_ptr<Socket> accept()
+ *  void close()
+ * */
+
+
 static void my_debug(void* ctx, int level,
                      const char* file, int line,
                      const char* str)
@@ -43,16 +51,20 @@ string constructErrorMessage(string command,
 }
 
 
-mbedtls_net_context listen_fd, client_fd;
+mbedtls_net_context listen_fd;
 mbedtls_x509_crt srvcert;
-mbedtls_ssl_context ssl;
 mbedtls_ssl_config conf;
 mbedtls_pk_context pkey;
 mbedtls_ssl_cookie_ctx cookie_ctx;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 mbedtls_ssl_cache_context cache;
+
+mbedtls_net_context client_fd;
+mbedtls_ssl_context ssl;
 size_t maximum_fragment_size;
+unsigned char client_ip[16] = {0};
+size_t cliip_len;
 
 
 void initialize()
@@ -162,36 +174,10 @@ int send(const vector<unsigned char>& data)
     return bytes_sent;
 }
 
-void work()
+bool accept()
 {
-    int ret, bytes_sent, bytes_received;
+    int ret;
 
-    vector<unsigned char> buf(1024, 0x00);
-    vector<unsigned char> sending_data;
-    unsigned char client_ip[16] = {0};
-    size_t cliip_len;
-
-    initialize();
-
-    /*
-     * 2. Setup the "listening" UDP socket
-     */
-    cout << "Enter listening address: ";
-    string listening_address;
-    cin >> listening_address;
-    cout << "Enter port: ";
-    unsigned short port;
-    cin >> port;
-    bind(listening_address, port);
-
-    reset:
-    mbedtls_net_free(&client_fd);
-    mbedtls_ssl_session_reset(&ssl);
-    maximum_fragment_size = 0;
-
-    /*
-     * 3. Wait until a client connects
-     */
     cout << "Waiting for a remote connection: ";
 
     if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
@@ -217,83 +203,118 @@ void work()
     if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
     {
         cout << "hello verification requested" << endl;
-        goto reset;
+        return false;
     }
     else if (ret != 0)
     {
         cout << constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
-        goto reset;
+        return false;
     }
 
     cout << "success" << endl;
     maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
     cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
+    return true;
+}
+
+void work()
+{
+    int ret, bytes_sent, bytes_received;
+
+    vector<unsigned char> buf(1024, 0x00);
+    vector<unsigned char> sending_data;
+
+    initialize();
 
     /*
-     * 6. Read the echo Request
+     * 2. Setup the "listening" UDP socket
      */
-    cout << "Receiving from client: ";
+    cout << "Enter listening address: ";
+    string listening_address;
+    cin >> listening_address;
+    cout << "Enter port: ";
+    unsigned short port;
+    cin >> port;
+    bind(listening_address, port);
+
     do
-        bytes_received = mbedtls_ssl_read(&ssl, buf.data(), buf.size());
-    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (bytes_received <= 0)
     {
-        switch (bytes_received)
+        mbedtls_net_free(&client_fd);
+        mbedtls_ssl_session_reset(&ssl);
+        maximum_fragment_size = 0;
+
+        /*
+         * 3. Wait until a client connects
+         */
+        if(!accept())
+            continue;
+
+        /*
+         * 6. Read the echo Request
+         */
+        cout << "Receiving from client: ";
+        do
+            bytes_received = mbedtls_ssl_read(&ssl, buf.data(), buf.size());
+        while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+        if (bytes_received <= 0)
         {
-            case MBEDTLS_ERR_SSL_TIMEOUT:
-                cout << "timeout" << endl;
-                goto reset;
+            switch (bytes_received)
+            {
+                case MBEDTLS_ERR_SSL_TIMEOUT:
+                    cout << "timeout" << endl;
+                    continue;
 
-            case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                cout << "connection was closed gracefully" << endl;
-                goto close_notify;
+                case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+                    cout << "connection was closed gracefully" << endl;
+                    goto close_notify;
 
-            default:
-                cout << "mbedtls_ssl_read() returned " << bytes_received << endl;
-                goto reset;
+                default:
+                    cout << "mbedtls_ssl_read() returned " << bytes_received << endl;
+                    continue;
+            }
         }
+        cout << "success" << endl;
+
+        sending_data = vector<unsigned char>(bytes_received);
+        cout << "Received from client (" << dec << bytes_received << " bytes): ";
+        for (int i = 0; i < bytes_received; ++i)
+        {
+            sending_data[i] = buf[i];
+            unsigned short x = buf[i];
+            cout << hex << x << " ";
+        }
+        cout << endl;
+
+        /*
+         * 7. Write the 200 Response
+         */
+        cout << "Sending to client: ";
+        bytes_sent = send(sending_data);
+        cout << "success" << endl;
+        cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
+        for (int i = 0; i < bytes_sent; ++i)
+        {
+            unsigned short x = buf[i];
+            cout << hex << x << " ";
+        }
+        cout << endl;
+
+        /*
+         * 8. Done, cleanly close the connection
+         */
+        close_notify:
+        cout << "Closing the connection: ";
+
+        /* No error checking, the connection might be closed already */
+        do
+            ret = mbedtls_ssl_close_notify(&ssl);
+        while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+        ret = 0;
+
+        cout << "success" << endl;
     }
-    cout << "success" << endl;
-
-    sending_data = vector<unsigned char>(bytes_received);
-    cout << "Received from client (" << dec << bytes_received << " bytes): ";
-    for (int i = 0; i < bytes_received; ++i)
-    {
-        sending_data[i] = buf[i];
-        unsigned short x = buf[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
-
-    /*
-     * 7. Write the 200 Response
-     */
-    cout << "Sending to client: ";
-    bytes_sent = send(sending_data);
-    cout << "success" << endl;
-    cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
-    for (int i = 0; i < bytes_sent; ++i)
-    {
-        unsigned short x = buf[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
-
-    /*
-     * 8. Done, cleanly close the connection
-     */
-    close_notify:
-    cout << "Closing the connection: ";
-
-    /* No error checking, the connection might be closed already */
-    do ret = mbedtls_ssl_close_notify(&ssl);
-    while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-    ret = 0;
-
-    cout << "success" << endl;
-
-    goto reset;
+    while(true);
 }
 
 void release()
