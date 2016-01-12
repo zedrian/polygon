@@ -218,14 +218,15 @@ size_t receive(unsigned char *data,
     }
 }
 
-int send(const vector<unsigned char> &data)
+size_t send(const unsigned char *data,
+            size_t size)
 {
-    if (data.size() > maximum_fragment_size)
+    if (size > maximum_fragment_size)
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
     int bytes_sent;
     do
-        bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
+        bytes_sent = mbedtls_ssl_write(&ssl, data, size);
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_sent < 0)
@@ -242,7 +243,7 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char> &data)
     while (true)
     {
         cout << "Sending to server: ";
-        send(data);
+        send(data.data(), data.size());
         cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
