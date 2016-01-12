@@ -193,6 +193,9 @@ void connect(const string address,
 size_t receive(unsigned char *data,
                size_t maximum_size) // TODO: add something like a timeout
 {
+    if(data == nullptr)
+        throw logic_error("Passed a nullptr to receive().");
+
     int bytes_received;
 
     do
@@ -221,6 +224,9 @@ size_t receive(unsigned char *data,
 size_t send(const unsigned char *data,
             size_t size)
 {
+    if(data == nullptr)
+        throw logic_error("Passed a nullptr to send().");
+
     if (size > maximum_fragment_size)
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
