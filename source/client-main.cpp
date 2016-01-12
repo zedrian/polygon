@@ -221,6 +221,11 @@ size_t receive(unsigned char *data,
     }
 }
 
+size_t receive(vector<unsigned char>& buffer)
+{
+    return receive(buffer.data(), buffer.size());
+}
+
 size_t send(const unsigned char *data,
             size_t size)
 {
@@ -258,7 +263,7 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char> &data)
         cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
-        bytes_received = receive(response.data(), response.size());
+        bytes_received = receive(response);
 
         if (bytes_received > 0)
             break;
