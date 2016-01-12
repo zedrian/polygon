@@ -83,11 +83,7 @@ void initialize()
     mbedtls_ctr_drbg_init(&ctr_drbg);
     mbedtls_debug_set_threshold(0);
 
-    /*
-     * 1. Load the certificates and private RSA key
-     */
     cout << "Loading server certificate and key: ";
-
     /*
      * This demonstration program uses embedded test certificates.
      * Instead, you may want to use mbedtls_x509_crt_parse_file() to read the
@@ -107,22 +103,14 @@ void initialize()
 
     cout << "success" << endl;
 
-    /*
-     * 3. Seed the RNG
-     */
-    cout << "Seeding the random number generator: ";
 
+    cout << "Seeding the random number generator: ";
     string personalizating_vector = "dtls_server";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
-
     cout << "success" << endl;
 
-    /*
-     * 4. Setup stuff
-     */
     cout << "Setting up the DTLS data: ";
-
     if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
 
@@ -199,11 +187,8 @@ bool accept()
     }
     cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
 
-    /*
-     * 5. Handshake
-     */
-    cout << "Performing the DTLS handshake: ";
 
+    cout << "Performing the DTLS handshake: ";
     do
         ret = mbedtls_ssl_handshake(&ssl);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
@@ -234,9 +219,6 @@ void work()
 
     initialize();
 
-    /*
-     * 2. Setup the "listening" UDP socket
-     */
     cout << "Enter listening address: ";
     string listening_address;
     cin >> listening_address;
@@ -251,15 +233,9 @@ void work()
         mbedtls_ssl_session_reset(&ssl);
         maximum_fragment_size = 0;
 
-        /*
-         * 3. Wait until a client connects
-         */
         if(!accept())
             continue;
 
-        /*
-         * 6. Read the echo Request
-         */
         cout << "Receiving from client: ";
         do
             bytes_received = mbedtls_ssl_read(&ssl, buf.data(), buf.size());
@@ -294,9 +270,7 @@ void work()
         }
         cout << endl;
 
-        /*
-         * 7. Write the 200 Response
-         */
+
         cout << "Sending to client: ";
         bytes_sent = send(sending_data);
         cout << "success" << endl;
@@ -308,9 +282,7 @@ void work()
         }
         cout << endl;
 
-        /*
-         * 8. Done, cleanly close the connection
-         */
+
         close_notify:
         cout << "Closing the connection: ";
 
@@ -318,7 +290,6 @@ void work()
         do
             ret = mbedtls_ssl_close_notify(&ssl);
         while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-        ret = 0;
 
         cout << "success" << endl;
     }
