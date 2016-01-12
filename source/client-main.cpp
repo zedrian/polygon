@@ -241,6 +241,11 @@ size_t send(const unsigned char *data,
     return bytes_sent;
 }
 
+size_t send(const vector<unsigned char>& data)
+{
+    return send(data.data(), data.size());
+}
+
 vector<unsigned char> sendWithConfirmation(const vector<unsigned char> &data)
 {
     vector<unsigned char> response(maximum_fragment_size, 0x00);
@@ -249,7 +254,7 @@ vector<unsigned char> sendWithConfirmation(const vector<unsigned char> &data)
     while (true)
     {
         cout << "Sending to server: ";
-        send(data.data(), data.size());
+        send(data);
         cout << "success" << endl;
 
         cout << "Receiving confirmation from server: ";
