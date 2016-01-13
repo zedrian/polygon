@@ -13,7 +13,9 @@ include_directories(${mbedTLS_INCLUDE_DIR})
 
 
 set(CLIENT_SOURCE_FILES
-        source/client-main.cpp source/socket.cpp source/socket.h)
+        source/client-main.cpp
+        source/socket.h
+        source/socket.cpp)
 
 set(SERVER_SOURCE_FILES
         source/server-main.cpp)

@@ -40,7 +40,7 @@ public:
                  unsigned short port);
     void close();
 
-    size_t send(unsigned char* data,
+    size_t send(const unsigned char* data,
                 size_t size);
     size_t send(const vector<unsigned char>& data);
 

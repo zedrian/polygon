@@ -81,8 +81,9 @@ Socket::~Socket()
     cout << "success" << endl;
 }
 
+
 void Socket::connect(const string address,
-             		 unsigned int port)
+                     unsigned short port)
 {
     int ret;
     cout << "Connecting to server: ";

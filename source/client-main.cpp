@@ -1,5 +1,6 @@
 #include <iomanip>
 #include <iostream>
+#include <stdexcept>
 
 #include "socket.h"
 
@@ -10,8 +11,6 @@ using std::endl;
 using std::to_string;
 using std::hex;
 using std::dec;
-using std::runtime_error;
-using std::logic_error;
 using std::exception;
 
 
@@ -53,7 +52,8 @@ void work(Socket& socket)
     cout << "success" << endl;
 }
 
-int main(int argc, char* argv[])
+int main(int argc,
+         char* argv[])
 {
     Socket socket;
     try
