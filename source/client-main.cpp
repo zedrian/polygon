@@ -14,8 +14,10 @@ using std::dec;
 using std::exception;
 
 
-void work(Socket& socket)
+void work()
 {
+    Socket socket;
+
     string server_address;
     unsigned int port;
     cout << "Enter server IP: ";
@@ -55,10 +57,9 @@ void work(Socket& socket)
 int main(int argc,
          char* argv[])
 {
-    Socket socket;
     try
     {
-        work(socket);
+        work();
     }
     catch (exception& e)
     {
