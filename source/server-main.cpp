@@ -59,6 +59,7 @@ mbedtls_ssl_cookie_ctx cookie_ctx;
 mbedtls_entropy_context entropy;
 mbedtls_ctr_drbg_context ctr_drbg;
 mbedtls_ssl_cache_context cache;
+mbedtls_timing_delay_context timer;
 
 mbedtls_net_context client_fd;
 mbedtls_ssl_context ssl;
@@ -131,7 +132,6 @@ void initialize()
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
 
-    mbedtls_timing_delay_context timer;
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
