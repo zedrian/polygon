@@ -37,17 +37,17 @@ Socket::Socket()
     /*
      * 0. Initialize the RNG and the session data
      */
-    mbedtls_net_init(&server_fd);
-    mbedtls_ssl_init(&ssl);
-    mbedtls_ssl_config_init(&conf);
-    mbedtls_x509_crt_init(&cacert);
-    mbedtls_ctr_drbg_init(&ctr_drbg);
+    mbedtls_net_init(&_net_context);
+    mbedtls_ssl_init(&_ssl_context);
+    mbedtls_ssl_config_init(&_ssl_configuration);
+    mbedtls_x509_crt_init(&_certificate);
+    mbedtls_ctr_drbg_init(&_drbg_context);
 
     cout << "Seeding the random number generator: ";
 
-    mbedtls_entropy_init(&entropy);
+    mbedtls_entropy_init(&_entropy_context);
     string personalizating_vector = "dtls_client";
-    if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy,
+    if ((ret = mbedtls_ctr_drbg_seed(&_drbg_context, mbedtls_entropy_func, &_entropy_context,
                                      (const unsigned char*) personalizating_vector.data(),
                                      personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
@@ -59,24 +59,24 @@ Socket::Socket()
      */
     cout << "Loading the CA root certificate: ";
 
-    ret = mbedtls_x509_crt_parse(&cacert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
-    active = false;
+    _active = false;
     cout << "success (" << ret << " skipped)" << endl;
 }
 
 Socket::~Socket()
 {
 	cout << "Release: ";
-    mbedtls_net_free(&server_fd);
+    mbedtls_net_free(&_net_context);
 
-    mbedtls_x509_crt_free(&cacert);
-    mbedtls_ssl_free(&ssl);
-    mbedtls_ssl_config_free(&conf);
-    mbedtls_ctr_drbg_free(&ctr_drbg);
-    mbedtls_entropy_free(&entropy);
+    mbedtls_x509_crt_free(&_certificate);
+    mbedtls_ssl_free(&_ssl_context);
+    mbedtls_ssl_config_free(&_ssl_configuration);
+    mbedtls_ctr_drbg_free(&_drbg_context);
+    mbedtls_entropy_free(&_entropy_context);
 
     cout << "success" << endl;
 }
@@ -88,7 +88,7 @@ void Socket::connect(const string address,
     int ret;
     cout << "Connecting to server: ";
 
-    if ((ret = mbedtls_net_connect(&server_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
+    if ((ret = mbedtls_net_connect(&_net_context, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
     {
         throw runtime_error(constructErrorMessage("mbedtls_net_connect()", ret));
     }
@@ -100,7 +100,7 @@ void Socket::connect(const string address,
      */
     cout << "Setting up the DTLS structure: ";
 
-    ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM,
+    ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM,
                                       MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
     {
@@ -110,24 +110,24 @@ void Socket::connect(const string address,
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
      * Production code should set a proper ca chain and use REQUIRED. */
-    mbedtls_ssl_conf_authmode(&conf, MBEDTLS_SSL_VERIFY_OPTIONAL);
-    mbedtls_ssl_conf_ca_chain(&conf, &cacert, NULL);
-    mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-    mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
+    mbedtls_ssl_conf_authmode(&_ssl_configuration, MBEDTLS_SSL_VERIFY_OPTIONAL);
+    mbedtls_ssl_conf_ca_chain(&_ssl_configuration, &_certificate, NULL);
+    mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_drbg_context);
+    mbedtls_ssl_conf_dbg(&_ssl_configuration, my_debug, stdout);
 
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+    if ((ret = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
     {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
     }
 
-    if ((ret = mbedtls_ssl_set_hostname(&ssl, "localhost")) != 0)
+    if ((ret = mbedtls_ssl_set_hostname(&_ssl_context, "localhost")) != 0)
     {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", ret));
     }
 
     mbedtls_timing_delay_context timer;
-    mbedtls_ssl_set_bio(&ssl, &server_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
+    mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+    mbedtls_ssl_set_timer_cb(&_ssl_context, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
 
@@ -138,7 +138,7 @@ void Socket::connect(const string address,
 
     do
     {
-        ret = mbedtls_ssl_handshake(&ssl);
+        ret = mbedtls_ssl_handshake(&_ssl_context);
     }
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
@@ -158,7 +158,7 @@ void Socket::connect(const string address,
      * handshake would not succeed if the peer's cert is bad.  Even if we used
      * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
     uint32_t flags;
-    if ((flags = mbedtls_ssl_get_verify_result(&ssl)) != 0)
+    if ((flags = mbedtls_ssl_get_verify_result(&_ssl_context)) != 0)
     {
         char vrfy_buf[512];
         mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", flags);
@@ -166,11 +166,11 @@ void Socket::connect(const string address,
         throw runtime_error(vrfy_buf);
     }
 
-    active = true;
+    _active = true;
     cout << "success" << endl;
 
-    maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
-    cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
+    _maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&_ssl_context);
+    cout << "Maximum size of a fragment for current session: " << _maximum_fragment_size << endl;
 }
 
 void Socket::close()
@@ -179,10 +179,10 @@ void Socket::close()
 
     /* No error checking, the connection might be closed already */
     do
-        ret = mbedtls_ssl_close_notify(&ssl);
+        ret = mbedtls_ssl_close_notify(&_ssl_context);
     while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
 
-    active = false;
+    _active = false;
 }
 
 
@@ -192,12 +192,12 @@ size_t Socket::send(const unsigned char* data,
     if (data == nullptr)
         throw logic_error("Passed a nullptr to send().");
 
-    if (size > maximum_fragment_size)
+    if (size > _maximum_fragment_size)
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
     int bytes_sent;
     do
-        bytes_sent = mbedtls_ssl_write(&ssl, data, size);
+        bytes_sent = mbedtls_ssl_write(&_ssl_context, data, size);
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_sent < 0)
@@ -220,7 +220,7 @@ size_t Socket::receive(unsigned char* data,
     int bytes_received;
 
     do
-        bytes_received = mbedtls_ssl_read(&ssl, data, maximum_size);
+        bytes_received = mbedtls_ssl_read(&_ssl_context, data, maximum_size);
     while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_received > 0)
@@ -234,7 +234,7 @@ size_t Socket::receive(unsigned char* data,
 
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
             cout << "connection was closed gracefully" << endl;
-            active = false;
+            _active = false;
             return 0;
 
         default:
@@ -249,7 +249,7 @@ size_t Socket::receive(vector<unsigned char>& buffer)
 
 vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& data)
 {
-    vector<unsigned char> response(maximum_fragment_size, 0x00);
+    vector<unsigned char> response(_maximum_fragment_size, 0x00);
     size_t bytes_received;
 
     while (true)
@@ -264,7 +264,7 @@ vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& 
         if (bytes_received > 0)
             break;
 
-        if (!active)
+        if (!_active)
             return vector<unsigned char>();
     }
     cout << "success" << endl;

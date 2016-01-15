@@ -52,12 +52,14 @@ public:
 
 
 private:
-    mbedtls_net_context server_fd;
-    mbedtls_x509_crt cacert;
-    mbedtls_ssl_context ssl;
-    mbedtls_ssl_config conf;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    size_t maximum_fragment_size;
-    bool active;
+    mbedtls_net_context _net_context;
+    mbedtls_ssl_context _ssl_context;
+
+    mbedtls_x509_crt _certificate;
+    mbedtls_ssl_config _ssl_configuration;
+    mbedtls_entropy_context _entropy_context;
+    mbedtls_ctr_drbg_context _drbg_context;
+
+    size_t _maximum_fragment_size;
+    bool _active;
 };
