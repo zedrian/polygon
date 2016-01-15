@@ -125,9 +125,8 @@ void Socket::connect(const string address,
         throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", ret));
     }
 
-    mbedtls_timing_delay_context timer;
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-    mbedtls_ssl_set_timer_cb(&_ssl_context, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
+    mbedtls_ssl_set_timer_cb(&_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
 

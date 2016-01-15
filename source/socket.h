@@ -59,6 +59,7 @@ private:
     mbedtls_ssl_config _ssl_configuration;
     mbedtls_entropy_context _entropy_context;
     mbedtls_ctr_drbg_context _drbg_context;
+    mbedtls_timing_delay_context _delay_context;
 
     size_t _maximum_fragment_size;
     bool _active;
