@@ -63,20 +63,36 @@ Socket::Socket()
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
+    _constructed_by_acceptor = false;
     _active = false;
     cout << "success (" << ret << " skipped)" << endl;
+}
+
+Socket::Socket(mbedtls_net_context net_context,
+               mbedtls_ssl_context ssl_context)
+{
+    _net_context = net_context;
+    _ssl_context = ssl_context;
+    _constructed_by_acceptor = true;
+
+    _maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&_ssl_context);
+
+    _active = false;
 }
 
 Socket::~Socket()
 {
 	cout << "Release: ";
     mbedtls_net_free(&_net_context);
-
-    mbedtls_x509_crt_free(&_certificate);
     mbedtls_ssl_free(&_ssl_context);
-    mbedtls_ssl_config_free(&_ssl_configuration);
-    mbedtls_ctr_drbg_free(&_drbg_context);
-    mbedtls_entropy_free(&_entropy_context);
+
+    if(!_constructed_by_acceptor)
+    {
+        mbedtls_x509_crt_free(&_certificate);
+        mbedtls_ssl_config_free(&_ssl_configuration);
+        mbedtls_ctr_drbg_free(&_drbg_context);
+        mbedtls_entropy_free(&_entropy_context);
+    }
 
     cout << "success" << endl;
 }

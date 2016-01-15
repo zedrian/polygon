@@ -34,6 +34,8 @@ class Socket
 {
 public:
     Socket();
+    Socket(mbedtls_net_context net_context,
+           mbedtls_ssl_context ssl_context);
     ~Socket();
 
     void connect(const string address,
@@ -54,6 +56,7 @@ public:
 private:
     mbedtls_net_context _net_context;
     mbedtls_ssl_context _ssl_context;
+    bool _constructed_by_acceptor;
 
     mbedtls_x509_crt _certificate;
     mbedtls_ssl_config _ssl_configuration;
