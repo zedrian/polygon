@@ -170,7 +170,6 @@ shared_ptr<Socket> accept()
         cout << "Waiting for a remote connection: ";
         mbedtls_net_free(&client_fd);
         mbedtls_ssl_session_reset(&ssl);
-        maximum_fragment_size = 0;
 
         if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
             throw runtime_error(s_constructErrorMessage("mbedtls_net_accept()", ret));
@@ -182,15 +181,6 @@ shared_ptr<Socket> accept()
         mbedtls_ssl_set_bio(&ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
         cout << "success" << endl;
-
-        cout << "Client address: ";
-        for(unsigned char i = 0; i < cliip_len - 1; ++i)
-        {
-            unsigned short x = client_ip[i];
-            cout << dec << x << ".";
-        }
-        cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
-
 
         cout << "Performing the DTLS handshake: ";
         do
@@ -213,6 +203,15 @@ shared_ptr<Socket> accept()
     while(true);
 
     cout << "success" << endl;
+
+    cout << "Client address: ";
+    for(unsigned char i = 0; i < cliip_len - 1; ++i)
+    {
+        unsigned short x = client_ip[i];
+        cout << dec << x << ".";
+    }
+    cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
+
     maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
     cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
     return make_shared<Socket>(client_fd, ssl);
