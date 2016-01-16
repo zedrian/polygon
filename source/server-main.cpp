@@ -14,15 +14,12 @@
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+#include "error.h"
 #include "socket.h"
 
 
-using std::string;
 using std::vector;
-using std::cout;
 using std::cin;
-using std::endl;
-using std::to_string;
 using std::hex;
 using std::dec;
 using std::runtime_error;
@@ -37,23 +34,6 @@ using std::make_shared;
  *  shared_ptr<Socket> accept()
  *  void close()
  * */
-
-
-static void my_debug(void* ctx, int level,
-                     const char* file, int line,
-                     const char* str)
-{
-    cout << file << ":" << line << ": " << str << endl;
-}
-
-string s_constructErrorMessage(string command,
-                             int code)
-{
-    char buffer[100];
-    mbedtls_strerror(code, buffer, 100);
-
-    return command + " failed with error code " + to_string(code) + " - " + buffer;
-}
 
 
 mbedtls_net_context listen_fd;
@@ -97,15 +77,15 @@ void initialize()
      */
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_srv_crt, mbedtls_test_srv_crt_len);
     if (ret != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_x509_crt_parse()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_x509_crt_parse()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*) mbedtls_test_srv_key, mbedtls_test_srv_key_len, NULL, 0);
     if (ret != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_pk_parse_key()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_pk_parse_key()", ret));
 
     cout << "success" << endl;
 
@@ -113,24 +93,24 @@ void initialize()
     cout << "Seeding the random number generator: ";
     string personalizating_vector = "dtls_server";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
     cout << "success" << endl;
 
     cout << "Setting up the DTLS data: ";
     if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
 
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
-    mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
+    mbedtls_ssl_conf_dbg(&conf, simpleDebug, stdout);
 
     mbedtls_ssl_conf_session_cache(&conf, &cache, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
 
     mbedtls_ssl_conf_ca_chain(&conf, srvcert.next, NULL);
     if ((ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &pkey)) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_conf_own_cert()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_conf_own_cert()", ret));
 
     if ((ret = mbedtls_ssl_cookie_setup(&cookie_ctx, mbedtls_ctr_drbg_random, &ctr_drbg)) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
 
     mbedtls_ssl_conf_dtls_cookies(&conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cookie_ctx);
 
@@ -144,7 +124,7 @@ void bind(string address,
 
     int ret;
     if ((ret = mbedtls_net_bind(&listen_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_net_bind()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_net_bind()", ret));
 
     cout << "success" << endl;
 }
@@ -156,7 +136,7 @@ shared_ptr<Socket> accept()
     cout << "Preparing SSL context for remote connection: ";
     mbedtls_ssl_init(&ssl);
     if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_setup()", ret));
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
     mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
     cout << "success" << endl;
 
@@ -167,11 +147,11 @@ shared_ptr<Socket> accept()
         mbedtls_ssl_session_reset(&ssl);
 
         if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
-            throw runtime_error(s_constructErrorMessage("mbedtls_net_accept()", ret));
+            throw runtime_error(constructErrorMessage("mbedtls_net_accept()", ret));
 
         /* For HelloVerifyRequest cookies */
         if ((ret = mbedtls_ssl_set_client_transport_id(&ssl, client_ip, cliip_len)) != 0)
-            throw runtime_error(s_constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
+            throw runtime_error(constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
 
         mbedtls_ssl_set_bio(&ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
@@ -189,7 +169,7 @@ shared_ptr<Socket> accept()
         }
         else if (ret != 0)
         {
-            cout << s_constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
+            cout << constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
             continue;
         }
 

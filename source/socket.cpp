@@ -1,32 +1,13 @@
 #include <iostream>
 
+#include "error.h"
 #include "socket.h"
 
 
 using std::cin;
-using std::cout;
-using std::endl;
-using std::to_string;
 using std::runtime_error;
 using std::logic_error;
 using std::exception;
-
-
-static void my_debug(void* ctx, int level,
-                     const char* file, int line,
-                     const char* str)
-{
-    cout << file << ":" << line << ": " << str << endl;
-}
-
-string constructErrorMessage(string command,
-                             int code)
-{
-    char buffer[100];
-    mbedtls_strerror(code, buffer, 100);
-
-    return command + " failed with error code " + to_string(code) + " - " + buffer;
-}
 
 
 Socket::Socket()
@@ -129,7 +110,7 @@ void Socket::connect(const string address,
     mbedtls_ssl_conf_authmode(&_ssl_configuration, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&_ssl_configuration, &_certificate, NULL);
     mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_drbg_context);
-    mbedtls_ssl_conf_dbg(&_ssl_configuration, my_debug, stdout);
+    mbedtls_ssl_conf_dbg(&_ssl_configuration, simpleDebug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
     {
