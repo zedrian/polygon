@@ -54,6 +54,9 @@ public:
 
     size_t maximumFragmentSize() const;
 
+    void generateRandom(unsigned char* buffer,
+                        size_t size);
+
 
 private:
     mbedtls_net_context _net_context;

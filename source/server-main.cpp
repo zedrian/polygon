@@ -24,7 +24,6 @@ void work()
     vector<unsigned char> buf(1024, 0x00);
     vector<unsigned char> sending_data;
 
-
     cout << "Enter listening address: ";
     string listening_address;
     cin >> listening_address;

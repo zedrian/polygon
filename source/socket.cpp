@@ -12,7 +12,7 @@ using std::exception;
 
 Socket::Socket()
 {
-	int ret;
+    int ret;
     mbedtls_debug_set_threshold(0);
 
     /*
@@ -61,11 +61,11 @@ Socket::Socket(mbedtls_net_context net_context,
 
 Socket::~Socket()
 {
-	cout << "Release: ";
+    cout << "Release: ";
     mbedtls_net_free(&_net_context);
     mbedtls_ssl_free(&_ssl_context);
 
-    if(!_constructed_by_acceptor)
+    if (!_constructed_by_acceptor)
     {
         mbedtls_x509_crt_free(&_certificate);
         mbedtls_ssl_config_free(&_ssl_configuration);
@@ -178,7 +178,7 @@ void Socket::close()
 
 
 size_t Socket::send(const unsigned char* data,
-            		size_t size)
+                    size_t size)
 {
     if (data == nullptr)
         throw logic_error("Passed a nullptr to send().");
@@ -203,7 +203,7 @@ size_t Socket::send(const vector<unsigned char>& data)
 }
 
 size_t Socket::receive(unsigned char* data,
-               		   size_t maximum_size) // TODO: add something like a timeout
+                       size_t maximum_size) // TODO: add something like a timeout
 {
     if (data == nullptr)
         throw logic_error("Passed a nullptr to receive().");
@@ -267,4 +267,13 @@ vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& 
 size_t Socket::maximumFragmentSize() const
 {
     return mbedtls_ssl_get_max_frag_len(&_ssl_context);;
+}
+
+void Socket::generateRandom(unsigned char* buffer,
+                            size_t size)
+{
+    int result;
+
+    if ((result = mbedtls_ctr_drbg_random(&_drbg_context, buffer, size)) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_random()", result));
 }
