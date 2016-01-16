@@ -237,8 +237,6 @@ void work()
     do
     {
         auto incoming_socket = accept();
-        if(incoming_socket == nullptr)
-            continue;
 
         cout << "Receiving from client: ";
         bytes_received = incoming_socket->receive(buf);
