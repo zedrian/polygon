@@ -79,7 +79,7 @@ void initialize()
 
     mbedtls_net_init(&listen_fd);
     mbedtls_net_init(&client_fd);
-//    mbedtls_ssl_init(&ssl);
+
     mbedtls_ssl_config_init(&conf);
     mbedtls_ssl_cookie_init(&cookie_ctx);
     mbedtls_ssl_cache_init(&cache);
@@ -133,11 +133,6 @@ void initialize()
         throw runtime_error(s_constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
 
     mbedtls_ssl_conf_dtls_cookies(&conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cookie_ctx);
-
-//    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-//        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_setup()", ret));
-
-//    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
 }
