@@ -219,7 +219,7 @@ shared_ptr<Socket> accept()
 
 void work()
 {
-    int ret, bytes_sent, bytes_received;
+    size_t bytes_sent, bytes_received;
 
     vector<unsigned char> buf(1024, 0x00);
     vector<unsigned char> sending_data;
