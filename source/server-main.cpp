@@ -16,6 +16,26 @@ using std::shared_ptr;
 using std::make_shared;
 
 
+void processClientInput(vector<unsigned char>& input,
+                        vector<unsigned char>& result)
+{
+    result = vector<unsigned char>(3, 0x00);
+    unsigned char minimum = input[0], maximum = input[0], sum = 0;
+
+    for(auto& x : input)
+    {
+        if (x < minimum)
+            minimum = x;
+        if (x > maximum)
+            maximum = x;
+        sum += x;
+    }
+
+    result[0] = minimum;
+    result[1] = maximum;
+    result[2] = sum;
+}
+
 void work()
 {
     Acceptor acceptor;
@@ -45,11 +65,12 @@ void work()
         cout << "Received from client (" << dec << bytes_received << " bytes): ";
         for (int i = 0; i < bytes_received; ++i)
         {
-            sending_data[i] = buf[i];
             unsigned short x = buf[i];
             cout << hex << x << " ";
         }
         cout << endl;
+
+        processClientInput(buf, sending_data);
 
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
@@ -57,7 +78,7 @@ void work()
         cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
         for (int i = 0; i < bytes_sent; ++i)
         {
-            unsigned short x = buf[i];
+            unsigned short x = sending_data[i];
             cout << hex << x << " ";
         }
         cout << endl;
@@ -66,11 +87,12 @@ void work()
         incoming_socket->close();
         cout << "success" << endl;
     }
-    while(true);
+    while (true);
 }
 
 
-int main(int argc, char** argv)
+int main(int argc,
+         char** argv)
 {
     try
     {
