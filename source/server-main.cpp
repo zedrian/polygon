@@ -1,6 +1,7 @@
 #include <iostream>
 #include <vector>
 #include <iomanip>
+#include <memory>
 
 #include <mbedtls/config.h>
 #include <mbedtls/net.h>
@@ -13,6 +14,8 @@
 #include <mbedtls/error.h>
 #include <mbedtls/certs.h>
 
+#include "socket.h"
+
 
 using std::string;
 using std::vector;
@@ -24,6 +27,8 @@ using std::hex;
 using std::dec;
 using std::runtime_error;
 using std::exception;
+using std::shared_ptr;
+using std::make_shared;
 
 
 /*
@@ -41,7 +46,7 @@ static void my_debug(void* ctx, int level,
     cout << file << ":" << line << ": " << str << endl;
 }
 
-string constructErrorMessage(string command,
+string s_constructErrorMessage(string command,
                              int code)
 {
     char buffer[100];
@@ -74,7 +79,7 @@ void initialize()
 
     mbedtls_net_init(&listen_fd);
     mbedtls_net_init(&client_fd);
-    mbedtls_ssl_init(&ssl);
+//    mbedtls_ssl_init(&ssl);
     mbedtls_ssl_config_init(&conf);
     mbedtls_ssl_cookie_init(&cookie_ctx);
     mbedtls_ssl_cache_init(&cache);
@@ -92,15 +97,15 @@ void initialize()
      */
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_srv_crt, mbedtls_test_srv_crt_len);
     if (ret != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     ret = mbedtls_x509_crt_parse(&srvcert, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     ret = mbedtls_pk_parse_key(&pkey, (const unsigned char*) mbedtls_test_srv_key, mbedtls_test_srv_key_len, NULL, 0);
     if (ret != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_pk_parse_key()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_pk_parse_key()", ret));
 
     cout << "success" << endl;
 
@@ -108,12 +113,12 @@ void initialize()
     cout << "Seeding the random number generator: ";
     string personalizating_vector = "dtls_server";
     if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
     cout << "success" << endl;
 
     cout << "Setting up the DTLS data: ";
     if ((ret = mbedtls_ssl_config_defaults(&conf, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
 
     mbedtls_ssl_conf_rng(&conf, mbedtls_ctr_drbg_random, &ctr_drbg);
     mbedtls_ssl_conf_dbg(&conf, my_debug, stdout);
@@ -122,17 +127,17 @@ void initialize()
 
     mbedtls_ssl_conf_ca_chain(&conf, srvcert.next, NULL);
     if ((ret = mbedtls_ssl_conf_own_cert(&conf, &srvcert, &pkey)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_conf_own_cert()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_conf_own_cert()", ret));
 
     if ((ret = mbedtls_ssl_cookie_setup(&cookie_ctx, mbedtls_ctr_drbg_random, &ctr_drbg)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
 
     mbedtls_ssl_conf_dtls_cookies(&conf, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &cookie_ctx);
 
-    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
+//    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+//        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_setup()", ret));
 
-    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
+//    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     cout << "success" << endl;
 }
@@ -144,70 +149,73 @@ void bind(string address,
 
     int ret;
     if ((ret = mbedtls_net_bind(&listen_fd, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_net_bind()", ret));
+        throw runtime_error(s_constructErrorMessage("mbedtls_net_bind()", ret));
 
     cout << "success" << endl;
 }
 
-int send(const vector<unsigned char>& data)
-{
-    int bytes_sent;
-    do
-        bytes_sent = mbedtls_ssl_write(&ssl, data.data(), data.size());
-    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (bytes_sent < 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
-
-    return bytes_sent;
-}
-
-bool accept()
+shared_ptr<Socket> accept()
 {
     int ret;
 
-    cout << "Waiting for a remote connection: ";
-
-    if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_net_accept()", ret));
-
-    /* For HelloVerifyRequest cookies */
-    if ((ret = mbedtls_ssl_set_client_transport_id(&ssl, client_ip, cliip_len)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
-
-    mbedtls_ssl_set_bio(&ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-
+    cout << "Preparing SSL context for remote connection: ";
+    mbedtls_ssl_init(&ssl);
+    if ((ret = mbedtls_ssl_setup(&ssl, &conf)) != 0)
+        throw runtime_error(s_constructErrorMessage("mbedtls_ssl_setup()", ret));
+    mbedtls_ssl_set_timer_cb(&ssl, &timer, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
     cout << "success" << endl;
 
-    cout << "Client address: ";
-    for(unsigned char i = 0; i < cliip_len - 1; ++i)
-    {
-        unsigned short x = client_ip[i];
-        cout << dec << x << ".";
-    }
-    cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
-
-
-    cout << "Performing the DTLS handshake: ";
     do
-        ret = mbedtls_ssl_handshake(&ssl);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+    {
+        cout << "Waiting for a remote connection: ";
+        mbedtls_net_free(&client_fd);
+        mbedtls_ssl_session_reset(&ssl);
+        maximum_fragment_size = 0;
 
-    if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
-    {
-        cout << "hello verification requested" << endl;
-        return false;
+        if ((ret = mbedtls_net_accept(&listen_fd, &client_fd, client_ip, sizeof(client_ip), &cliip_len)) != 0)
+            throw runtime_error(s_constructErrorMessage("mbedtls_net_accept()", ret));
+
+        /* For HelloVerifyRequest cookies */
+        if ((ret = mbedtls_ssl_set_client_transport_id(&ssl, client_ip, cliip_len)) != 0)
+            throw runtime_error(s_constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
+
+        mbedtls_ssl_set_bio(&ssl, &client_fd, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+
+        cout << "success" << endl;
+
+        cout << "Client address: ";
+        for(unsigned char i = 0; i < cliip_len - 1; ++i)
+        {
+            unsigned short x = client_ip[i];
+            cout << dec << x << ".";
+        }
+        cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
+
+
+        cout << "Performing the DTLS handshake: ";
+        do
+            ret = mbedtls_ssl_handshake(&ssl);
+        while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+        if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
+        {
+            cout << "hello verification requested" << endl;
+            continue;
+        }
+        else if (ret != 0)
+        {
+            cout << s_constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
+            continue;
+        }
+
+        break;
     }
-    else if (ret != 0)
-    {
-        cout << constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
-        return false;
-    }
+    while(true);
 
     cout << "success" << endl;
     maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
     cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
-    return true;
+    return make_shared<Socket>(client_fd, ssl);
 }
 
 void work()
@@ -229,35 +237,12 @@ void work()
 
     do
     {
-        mbedtls_net_free(&client_fd);
-        mbedtls_ssl_session_reset(&ssl);
-        maximum_fragment_size = 0;
-
-        if(!accept())
+        auto incoming_socket = accept();
+        if(incoming_socket == nullptr)
             continue;
 
         cout << "Receiving from client: ";
-        do
-            bytes_received = mbedtls_ssl_read(&ssl, buf.data(), buf.size());
-        while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-        if (bytes_received <= 0)
-        {
-            switch (bytes_received)
-            {
-                case MBEDTLS_ERR_SSL_TIMEOUT:
-                    cout << "timeout" << endl;
-                    continue;
-
-                case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-                    cout << "connection was closed gracefully" << endl;
-                    goto close_notify;
-
-                default:
-                    cout << "mbedtls_ssl_read() returned " << bytes_received << endl;
-                    continue;
-            }
-        }
+        bytes_received = incoming_socket->receive(buf);
         cout << "success" << endl;
 
         sending_data = vector<unsigned char>(bytes_received);
@@ -272,7 +257,7 @@ void work()
 
 
         cout << "Sending to client: ";
-        bytes_sent = send(sending_data);
+        bytes_sent = incoming_socket->send(sending_data);
         cout << "success" << endl;
         cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
         for (int i = 0; i < bytes_sent; ++i)
@@ -281,16 +266,8 @@ void work()
             cout << hex << x << " ";
         }
         cout << endl;
-
-
-        close_notify:
         cout << "Closing the connection: ";
-
-        /* No error checking, the connection might be closed already */
-        do
-            ret = mbedtls_ssl_close_notify(&ssl);
-        while (ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
+        incoming_socket->close();
         cout << "success" << endl;
     }
     while(true);

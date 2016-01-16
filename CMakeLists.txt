@@ -30,4 +30,4 @@ add_executable(client ${CLIENT_SOURCE_FILES})
 target_link_libraries(client network ${mbedTLS_LIBRARIES})
 
 add_executable(server ${SERVER_SOURCE_FILES})
-target_link_libraries(server ${mbedTLS_LIBRARIES})
+target_link_libraries(server network ${mbedTLS_LIBRARIES})
