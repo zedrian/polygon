@@ -17,7 +17,7 @@ set(NETWORK_SOURCE
         source/error.h
         source/error.cpp
         source/socket.h
-        source/socket.cpp)
+        source/socket.cpp source/acceptor.cpp source/acceptor.h)
 
 set(CLIENT_SOURCE_FILES
         source/client-main.cpp)
