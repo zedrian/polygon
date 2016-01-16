@@ -82,8 +82,8 @@ void initialize()
 
 
     cout << "Seeding the random number generator: ";
-    string personalizating_vector = "dtls_server";
-    if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) personalizating_vector.data(), personalizating_vector.size())) != 0)
+    string seeding_vector = "dtls_server";
+    if ((ret = mbedtls_ctr_drbg_seed(&ctr_drbg, mbedtls_entropy_func, &entropy, (const unsigned char*) seeding_vector.data(), seeding_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
     cout << "success" << endl;
 
@@ -218,7 +218,6 @@ void work()
         }
         cout << endl;
 
-
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
         cout << "success" << endl;
@@ -229,6 +228,7 @@ void work()
             cout << hex << x << " ";
         }
         cout << endl;
+
         cout << "Closing the connection: ";
         incoming_socket->close();
         cout << "success" << endl;
@@ -240,11 +240,11 @@ void release()
 {
     cout << "Release: ";
     mbedtls_net_free(&client_fd);
-    mbedtls_net_free(&listen_fd);
+    mbedtls_ssl_free(&ssl);
 
+    mbedtls_net_free(&listen_fd);
     mbedtls_x509_crt_free(&srvcert);
     mbedtls_pk_free(&pkey);
-    mbedtls_ssl_free(&ssl);
     mbedtls_ssl_config_free(&conf);
     mbedtls_ssl_cookie_free(&cookie_ctx);
     mbedtls_ssl_cache_free(&cache);
@@ -262,7 +262,7 @@ int main(int argc, char** argv)
     }
     catch (exception& e)
     {
-        cout << "fail: " << e.what() << endl;
+        cout << "Fail: " << e.what() << endl;
     }
     release();
 }
