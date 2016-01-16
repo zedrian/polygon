@@ -1,18 +1,9 @@
-#include <iostream>
-#include <vector>
 #include <iomanip>
 #include <memory>
 
 #include <mbedtls/config.h>
-#include <mbedtls/net.h>
 #include <mbedtls/ssl_cookie.h>
-#include <mbedtls/entropy.h>
-#include <mbedtls/ctr_drbg.h>
-#include <mbedtls/timing.h>
 #include <mbedtls/ssl_cache.h>
-#include <mbedtls/debug.h>
-#include <mbedtls/error.h>
-#include <mbedtls/certs.h>
 
 #include "error.h"
 #include "socket.h"
