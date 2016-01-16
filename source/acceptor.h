@@ -26,18 +26,16 @@ public:
 
 
 private:
-    mbedtls_net_context listen_fd;
-    mbedtls_x509_crt srvcert;
-    mbedtls_ssl_config conf;
-    mbedtls_pk_context pkey;
-    mbedtls_ssl_cookie_ctx cookie_ctx;
-    mbedtls_entropy_context entropy;
-    mbedtls_ctr_drbg_context ctr_drbg;
-    mbedtls_ssl_cache_context cache;
-    mbedtls_timing_delay_context timer;
+    mbedtls_net_context _net_context;
+    mbedtls_x509_crt _certificate;
+    mbedtls_ssl_config _ssl_configuration;
+    mbedtls_pk_context _public_key_context;
+    mbedtls_ssl_cookie_ctx _cookie_context;
+    mbedtls_entropy_context _enthropy_context;
+    mbedtls_ctr_drbg_context _drbg_context;
+    mbedtls_ssl_cache_context _cache_context;
+    mbedtls_timing_delay_context _delay_context;
 
-    mbedtls_net_context client_fd;
-    mbedtls_ssl_context ssl;
-    unsigned char client_ip[16] = {0};
-    size_t cliip_len;
+    mbedtls_net_context _incoming_net_context;
+    mbedtls_ssl_context _incoming_ssl_context;
 };
