@@ -28,9 +28,10 @@ void work()
     socket.connect(server_address, port);
     cout << "Maximum size of a fragment for current session: " << socket.maximumFragmentSize() << endl;
 
-    vector<unsigned char> data(10, 0x00);
-    for (unsigned char i = 0; i < 10; ++i)
-        data[i] = i + i * 0x10;
+    unsigned char data_size;
+    socket.generateRandom(&data_size, 1);
+    vector<unsigned char> data(data_size, 0x00);
+    socket.generateRandom(data.data(), data_size);
 
     cout << "Data to send to server (" << dec << data.size() << " bytes): ";
     for (int i = 0; i < data.size(); ++i)
