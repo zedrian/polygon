@@ -26,6 +26,7 @@ void work()
     cin >> port;
 
     socket.connect(server_address, port);
+    cout << "Maximum size of a fragment for current session: " << socket.maximumFragmentSize() << endl;
 
     vector<unsigned char> data(10, 0x00);
     for (unsigned char i = 0; i < 10; ++i)

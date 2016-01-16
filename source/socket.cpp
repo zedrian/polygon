@@ -56,8 +56,6 @@ Socket::Socket(mbedtls_net_context net_context,
     _ssl_context = ssl_context;
     _constructed_by_acceptor = true;
 
-    _maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&_ssl_context);
-
     _active = false;
 }
 
@@ -164,9 +162,6 @@ void Socket::connect(const string address,
 
     _active = true;
     cout << "success" << endl;
-
-    _maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&_ssl_context);
-    cout << "Maximum size of a fragment for current session: " << _maximum_fragment_size << endl;
 }
 
 void Socket::close()
@@ -188,7 +183,7 @@ size_t Socket::send(const unsigned char* data,
     if (data == nullptr)
         throw logic_error("Passed a nullptr to send().");
 
-    if (size > _maximum_fragment_size)
+    if (size > maximumFragmentSize())
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
     int bytes_sent;
@@ -245,7 +240,7 @@ size_t Socket::receive(vector<unsigned char>& buffer)
 
 vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& data)
 {
-    vector<unsigned char> response(_maximum_fragment_size, 0x00);
+    vector<unsigned char> response(maximumFragmentSize(), 0x00);
     size_t bytes_received;
 
     while (true)
@@ -267,4 +262,9 @@ vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& 
 
     response.resize(bytes_received);
     return response;
+}
+
+size_t Socket::maximumFragmentSize() const
+{
+    return mbedtls_ssl_get_max_frag_len(&_ssl_context);;
 }

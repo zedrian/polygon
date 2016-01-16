@@ -39,7 +39,6 @@ mbedtls_timing_delay_context timer;
 
 mbedtls_net_context client_fd;
 mbedtls_ssl_context ssl;
-size_t maximum_fragment_size;
 unsigned char client_ip[16] = {0};
 size_t cliip_len;
 
@@ -178,8 +177,6 @@ shared_ptr<Socket> accept()
     }
     cout << dec << static_cast<unsigned short>(client_ip[cliip_len - 1]) << endl;
 
-    maximum_fragment_size = mbedtls_ssl_get_max_frag_len(&ssl);
-    cout << "Maximum size of a fragment for current session: " << maximum_fragment_size << endl;
     return make_shared<Socket>(client_fd, ssl);
 }
 
@@ -203,6 +200,7 @@ void work()
     do
     {
         auto incoming_socket = accept();
+        cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
         cout << "Receiving from client: ";
         bytes_received = incoming_socket->receive(buf);

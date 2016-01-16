@@ -52,6 +52,8 @@ public:
 
     vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data);
 
+    size_t maximumFragmentSize() const;
+
 
 private:
     mbedtls_net_context _net_context;
@@ -64,6 +66,5 @@ private:
     mbedtls_ctr_drbg_context _drbg_context;
     mbedtls_timing_delay_context _delay_context;
 
-    size_t _maximum_fragment_size;
     bool _active;
 };
