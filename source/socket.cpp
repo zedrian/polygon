@@ -45,7 +45,6 @@ Socket::Socket()
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     _constructed_by_acceptor = false;
-    _active = false;
     cout << "success (" << ret << " skipped)" << endl;
 }
 
@@ -56,7 +55,6 @@ Socket::Socket(mbedtls_net_context net_context,
     _ssl_context = ssl_context;
     _constructed_by_acceptor = true;
 
-    _active = false;
 }
 
 Socket::~Socket()
@@ -160,7 +158,6 @@ void Socket::connect(const string address,
         throw runtime_error(vrfy_buf);
     }
 
-    _active = true;
     cout << "success" << endl;
 }
 
@@ -173,7 +170,6 @@ void Socket::close()
         ret = mbedtls_ssl_close_notify(&_ssl_context);
     while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
 
-    _active = false;
 }
 
 
@@ -225,7 +221,6 @@ size_t Socket::receive(unsigned char* data,
 
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
             cout << "connection was closed gracefully" << endl;
-            _active = false;
             return 0;
 
         default:
