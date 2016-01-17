@@ -21,16 +21,13 @@ void showArray(vector<unsigned char>& data)
     for(size_t index = 0; index < data.size(); ++index)
     {
         cout << setfill('0') << hex << setw(2) << static_cast<unsigned short>(data[index]) << ' ';
-        ++index;
 
-        if(index % 4 == 0)
+        if(index % 4 == 3)
             cout << ' ';
-        if(index % 8 == 0)
+        if(index % 8 == 7)
             cout << ' ';
-        if(index % 16 == 0)
+        if(index % 16 == 15)
             cout << endl;
-
-        --index;
     }
     cout << endl;
 }
@@ -57,7 +54,11 @@ void work()
     cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
     showArray(data);
 
-    socket.send(data);
+    cout << "Sending data to server: ";
+    auto bytes_sent = socket.send(data);
+    cout << "success (" << dec << bytes_sent << " bytes sent)" << endl;
+
+
     vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
     auto bytes_received = socket.receive(response);
     response.resize(bytes_received);
