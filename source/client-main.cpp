@@ -11,8 +11,29 @@ using std::endl;
 using std::to_string;
 using std::hex;
 using std::dec;
+using std::setfill;
+using std::setw;
 using std::exception;
 
+
+void showArray(vector<unsigned char>& data)
+{
+    for(size_t index = 0; index < data.size(); ++index)
+    {
+        cout << setfill('0') << hex << setw(2) << static_cast<unsigned short>(data[index]) << ' ';
+        ++index;
+
+        if(index % 4 == 0)
+            cout << ' ';
+        if(index % 8 == 0)
+            cout << ' ';
+        if(index % 16 == 0)
+            cout << endl;
+
+        --index;
+    }
+    cout << endl;
+}
 
 void work()
 {
@@ -33,26 +54,16 @@ void work()
     vector<unsigned char> data(data_size, 0x00);
     socket.generateRandom(data.data(), data_size);
 
-    cout << "Data to send to server (" << dec << data.size() << " bytes): ";
-    for (int i = 0; i < data.size(); ++i)
-    {
-        unsigned short x = data[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
+    cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
+    showArray(data);
 
     socket.send(data);
     vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
     auto bytes_received = socket.receive(response);
     response.resize(bytes_received);
 
-    cout << "Server's response (" << dec << response.size() << " bytes): ";
-    for (int i = 0; i < response.size(); ++i)
-    {
-        unsigned short x = response[i];
-        cout << hex << x << " ";
-    }
-    cout << endl;
+    cout << "Server's response (" << dec << response.size() << " bytes):" << endl;
+    showArray(response);
 
     cout << "Closing the connection: ";
     socket.close();
