@@ -41,7 +41,10 @@ void work()
     }
     cout << endl;
 
-    auto response = socket.sendWithConfirmation(data);
+    socket.send(data);
+    vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
+    auto bytes_received = socket.receive(response);
+    response.resize(bytes_received);
 
     cout << "Server's response (" << dec << response.size() << " bytes): ";
     for (int i = 0; i < response.size(); ++i)
