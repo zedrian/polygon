@@ -109,14 +109,10 @@ void Socket::connect(const string address,
     mbedtls_ssl_conf_dbg(&_ssl_configuration, simpleDebug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
-    {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
-    }
 
     if ((ret = mbedtls_ssl_set_hostname(&_ssl_context, "localhost")) != 0)
-    {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", ret));
-    }
 
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_timer_cb(&_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
@@ -129,15 +125,11 @@ void Socket::connect(const string address,
     cout << "Performing the SSL/TLS handshake: ";
 
     do
-    {
         ret = mbedtls_ssl_handshake(&_ssl_context);
-    }
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret != 0)
-    {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_handshake()", ret));
-    }
 
     cout << "success" << endl;
 
