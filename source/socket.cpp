@@ -238,32 +238,6 @@ size_t Socket::receive(vector<unsigned char>& buffer)
     return receive(buffer.data(), buffer.size());
 }
 
-vector<unsigned char> Socket::sendWithConfirmation(const vector<unsigned char>& data)
-{
-    vector<unsigned char> response(maximumFragmentSize(), 0x00);
-    size_t bytes_received;
-
-    while (true)
-    {
-        cout << "Sending to server: ";
-        send(data);
-        cout << "success" << endl;
-
-        cout << "Receiving confirmation from server: ";
-        bytes_received = receive(response);
-
-        if (bytes_received > 0)
-            break;
-
-        if (!_active)
-            return vector<unsigned char>();
-    }
-    cout << "success" << endl;
-
-    response.resize(bytes_received);
-    return response;
-}
-
 size_t Socket::maximumFragmentSize() const
 {
     return mbedtls_ssl_get_max_frag_len(&_ssl_context);;

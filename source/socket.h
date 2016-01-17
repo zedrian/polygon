@@ -50,8 +50,6 @@ public:
                    size_t maximum_size);
     size_t receive(vector<unsigned char>& buffer);
 
-    vector<unsigned char> sendWithConfirmation(const vector<unsigned char>& data);
-
     size_t maximumFragmentSize() const;
 
     void generateRandom(unsigned char* buffer,
