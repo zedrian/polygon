@@ -22,8 +22,8 @@ Acceptor::Acceptor()
     mbedtls_ssl_cache_init(&_cache_context);
     mbedtls_x509_crt_init(&_certificate);
     mbedtls_pk_init(&_public_key_context);
-    mbedtls_entropy_init(&_enthropy_context);
-    mbedtls_ctr_drbg_init(&_drbg_context);
+    mbedtls_entropy_init(&_entropy_context);
+    mbedtls_ctr_drbg_init(&_ctr_drbg_context);
     mbedtls_debug_set_threshold(0);
 
     cout << "Loading server certificate and key: ";
@@ -49,7 +49,7 @@ Acceptor::Acceptor()
 
     cout << "Seeding the random number generator: ";
     string seeding_vector = "dtls_server";
-    if ((ret = mbedtls_ctr_drbg_seed(&_drbg_context, mbedtls_entropy_func, &_enthropy_context, (const unsigned char*) seeding_vector.data(), seeding_vector.size())) != 0)
+    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) seeding_vector.data(), seeding_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
     cout << "success" << endl;
 
@@ -57,7 +57,7 @@ Acceptor::Acceptor()
     if ((ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
 
-    mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_drbg_context);
+    mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_ctr_drbg_context);
     mbedtls_ssl_conf_dbg(&_ssl_configuration, simpleDebug, stdout);
 
     mbedtls_ssl_conf_session_cache(&_ssl_configuration, &_cache_context, mbedtls_ssl_cache_get, mbedtls_ssl_cache_set);
@@ -66,7 +66,7 @@ Acceptor::Acceptor()
     if ((ret = mbedtls_ssl_conf_own_cert(&_ssl_configuration, &_certificate, &_public_key_context)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_conf_own_cert()", ret));
 
-    if ((ret = mbedtls_ssl_cookie_setup(&_cookie_context, mbedtls_ctr_drbg_random, &_drbg_context)) != 0)
+    if ((ret = mbedtls_ssl_cookie_setup(&_cookie_context, mbedtls_ctr_drbg_random, &_ctr_drbg_context)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
 
     mbedtls_ssl_conf_dtls_cookies(&_ssl_configuration, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &_cookie_context);
@@ -167,6 +167,6 @@ void Acceptor::close()
     mbedtls_ssl_config_free(&_ssl_configuration);
     mbedtls_ssl_cookie_free(&_cookie_context);
     mbedtls_ssl_cache_free(&_cache_context);
-    mbedtls_ctr_drbg_free(&_drbg_context);
-    mbedtls_entropy_free(&_enthropy_context);
+    mbedtls_ctr_drbg_free(&_ctr_drbg_context);
+    mbedtls_entropy_free(&_entropy_context);
 }

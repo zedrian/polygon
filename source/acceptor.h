@@ -31,8 +31,8 @@ private:
     mbedtls_ssl_config _ssl_configuration;
     mbedtls_pk_context _public_key_context;
     mbedtls_ssl_cookie_ctx _cookie_context;
-    mbedtls_entropy_context _enthropy_context;
-    mbedtls_ctr_drbg_context _drbg_context;
+    mbedtls_entropy_context _entropy_context;
+    mbedtls_ctr_drbg_context _ctr_drbg_context;
     mbedtls_ssl_cache_context _cache_context;
     mbedtls_timing_delay_context _delay_context;
 

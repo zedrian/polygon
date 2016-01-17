@@ -22,13 +22,13 @@ Socket::Socket()
     mbedtls_ssl_init(&_ssl_context);
     mbedtls_ssl_config_init(&_ssl_configuration);
     mbedtls_x509_crt_init(&_certificate);
-    mbedtls_ctr_drbg_init(&_drbg_context);
+    mbedtls_ctr_drbg_init(&_ctr_drbg_context);
 
     cout << "Seeding the random number generator: ";
 
     mbedtls_entropy_init(&_entropy_context);
     string personalizating_vector = "dtls_client";
-    if ((ret = mbedtls_ctr_drbg_seed(&_drbg_context, mbedtls_entropy_func, &_entropy_context,
+    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context,
                                      (const unsigned char*) personalizating_vector.data(),
                                      personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
@@ -69,7 +69,7 @@ Socket::~Socket()
     {
         mbedtls_x509_crt_free(&_certificate);
         mbedtls_ssl_config_free(&_ssl_configuration);
-        mbedtls_ctr_drbg_free(&_drbg_context);
+        mbedtls_ctr_drbg_free(&_ctr_drbg_context);
         mbedtls_entropy_free(&_entropy_context);
     }
 
@@ -107,7 +107,7 @@ void Socket::connect(const string address,
      * Production code should set a proper ca chain and use REQUIRED. */
     mbedtls_ssl_conf_authmode(&_ssl_configuration, MBEDTLS_SSL_VERIFY_OPTIONAL);
     mbedtls_ssl_conf_ca_chain(&_ssl_configuration, &_certificate, NULL);
-    mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_drbg_context);
+    mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_ctr_drbg_context);
     mbedtls_ssl_conf_dbg(&_ssl_configuration, simpleDebug, stdout);
 
     if ((ret = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
@@ -274,6 +274,6 @@ void Socket::generateRandom(unsigned char* buffer,
 {
     int result;
 
-    if ((result = mbedtls_ctr_drbg_random(&_drbg_context, buffer, size)) != 0)
+    if ((result = mbedtls_ctr_drbg_random(&_ctr_drbg_context, buffer, size)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_random()", result));
 }
