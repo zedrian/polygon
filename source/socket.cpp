@@ -1,4 +1,5 @@
 #include <iostream>
+#include <mbedtls/timing.h>
 
 #include "error.h"
 #include "socket.h"
@@ -29,7 +30,7 @@ Socket::Socket()
     mbedtls_entropy_init(&_entropy_context);
     string personalizating_vector = "dtls_client";
     if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context,
-                                     (const unsigned char*) personalizating_vector.data(),
+                                     (const unsigned char *) personalizating_vector.data(),
                                      personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
 
@@ -40,7 +41,7 @@ Socket::Socket()
      */
     cout << "Loading the CA root certificate: ";
 
-    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char *) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
@@ -165,7 +166,7 @@ void Socket::close()
 }
 
 
-size_t Socket::send(const unsigned char* data,
+size_t Socket::send(const unsigned char *data,
                     size_t size)
 {
     if (data == nullptr)
@@ -185,21 +186,24 @@ size_t Socket::send(const unsigned char* data,
     return bytes_sent;
 }
 
-size_t Socket::send(const vector<unsigned char>& data)
+size_t Socket::send(const vector<unsigned char> &data)
 {
     return send(data.data(), data.size());
 }
 
-size_t Socket::receive(unsigned char* data,
-                       size_t maximum_size) // TODO: add something like a timeout
+size_t Socket::receive(unsigned char *data,
+                       size_t maximum_size,
+                       size_t timeout_in_milliseconds = 0)
 {
+
+
     if (data == nullptr)
         throw logic_error("Passed a nullptr to receive().");
 
     int bytes_received;
 
     do
-        bytes_received = mbedtls_ssl_read(&_ssl_context, data, maximum_size);
+        bytes_received = mbedtls_net_recv_timeout(&_net_context, data, maximum_size, timeout_in_milliseconds);
     while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_received > 0)
@@ -220,9 +224,10 @@ size_t Socket::receive(unsigned char* data,
     }
 }
 
-size_t Socket::receive(vector<unsigned char>& buffer)
+size_t Socket::receive(vector<unsigned char> &buffer,
+                       size_t timeout_in_milliseconds = 0)
 {
-    return receive(buffer.data(), buffer.size());
+    return receive(buffer.data(), buffer.size(), timeout_in_milliseconds);
 }
 
 size_t Socket::maximumFragmentSize() const
@@ -230,7 +235,7 @@ size_t Socket::maximumFragmentSize() const
     return mbedtls_ssl_get_max_frag_len(&_ssl_context);;
 }
 
-void Socket::generateRandom(unsigned char* buffer,
+void Socket::generateRandom(unsigned char *buffer,
                             size_t size)
 {
     int result;

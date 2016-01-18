@@ -47,8 +47,10 @@ public:
     size_t send(const vector<unsigned char>& data);
 
     size_t receive(unsigned char* buffer,
-                   size_t maximum_size);
-    size_t receive(vector<unsigned char>& buffer);
+                   size_t maximum_size,
+                   size_t timeout_in_milliseconds);
+    size_t receive(vector<unsigned char> &buffer,
+                   size_t timeout_in_milliseconds);
 
     size_t maximumFragmentSize() const;
 

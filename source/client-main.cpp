@@ -60,7 +60,7 @@ void work()
 
 
     vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
-    auto bytes_received = socket.receive(response);
+    auto bytes_received = socket.receive(response, 300);
     response.resize(bytes_received);
 
     cout << "Server's response (" << dec << response.size() << " bytes):" << endl;

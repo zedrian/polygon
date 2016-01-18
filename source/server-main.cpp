@@ -58,7 +58,7 @@ void work()
         cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
         cout << "Receiving from client: ";
-        bytes_received = incoming_socket->receive(buf);
+        bytes_received = incoming_socket->receive(buf, 0);
         cout << "success" << endl;
 
         sending_data = vector<unsigned char>(bytes_received);
@@ -71,6 +71,7 @@ void work()
         cout << endl;
 
         processClientInput(buf, sending_data);
+        for(auto i = 0; i < 100000; ++i) cout << " "; cout << endl;
 
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
