@@ -1,21 +1,12 @@
 #include <iostream>
 
+#include "stupid.h"
+
+
+using namespace polygon::math;
 
 using std::cout;
 using std::endl;
-
-
-float stupidMin(float a,
-                float b)
-{
-    return a < b ? a : b;
-}
-
-float stupidMax(float a,
-                float b)
-{
-    return a > b ? a : b;
-}
 
 
 int main()

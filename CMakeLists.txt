@@ -8,6 +8,8 @@ set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -static")
 
 
 set(SOURCE_FILES
+        source/stupid.h
+        source/stupid.cpp
         source/main.cpp)
 
 add_executable(polygon ${SOURCE_FILES})
