@@ -12,7 +12,7 @@ set(MATH_SOURCE
         source/stupid.h
         source/stupid.cpp)
 
-add_library(math ${MATH_SOURCE})
+add_library(math SHARED ${MATH_SOURCE})
 
 
 set(SOURCE_FILES
