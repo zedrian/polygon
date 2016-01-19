@@ -15,8 +15,15 @@ set(MATH_SOURCE
 add_library(math SHARED ${MATH_SOURCE})
 
 
+set(NETWORK_SOURCE
+        source/socket.h
+        source/socket.cpp source/socket-implementation.cpp source/socket-implementation.h)
+
+add_library(network SHARED ${NETWORK_SOURCE})
+
+
 set(SOURCE_FILES
         source/main.cpp)
 
 add_executable(polygon ${SOURCE_FILES})
-target_link_libraries(polygon math)
+target_link_libraries(polygon math network)
