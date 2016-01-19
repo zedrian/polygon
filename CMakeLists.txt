@@ -3,13 +3,20 @@ project(polygon)
 
 
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/bin)
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -static")
 
 
-set(SOURCE_FILES
+set(MATH_SOURCE
         source/stupid.h
-        source/stupid.cpp
+        source/stupid.cpp)
+
+add_library(math ${MATH_SOURCE})
+
+
+set(SOURCE_FILES
         source/main.cpp)
 
 add_executable(polygon ${SOURCE_FILES})
+target_link_libraries(polygon math)
