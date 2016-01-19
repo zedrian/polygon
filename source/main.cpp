@@ -5,7 +5,26 @@ using std::cout;
 using std::endl;
 
 
+float stupidMin(float a,
+                float b)
+{
+    return a < b ? a : b;
+}
+
+float stupidMax(float a,
+                float b)
+{
+    return a > b ? a : b;
+}
+
+
 int main()
 {
-    cout << "Here is a polygon on it's MASTER branch. By default it's doing nothing but showing this message." << endl;
+    float a = 2.0f;
+    float b = 3.0f;
+
+    cout << "a = 2.0" << endl;
+    cout << "b = 3.0" << endl;
+    cout << "stupidMin(a, b) = " << stupidMin(a, b) << endl;
+    cout << "stupidMax(a, b) = " << stupidMax(a, b) << endl;
 }
