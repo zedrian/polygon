@@ -48,9 +48,9 @@ public:
 
     size_t receive(unsigned char* buffer,
                    size_t maximum_size,
-                   size_t timeout_in_milliseconds);
+                   size_t timeout_in_milliseconds = 0);
     size_t receive(vector<unsigned char> &buffer,
-                   size_t timeout_in_milliseconds);
+                   size_t timeout_in_milliseconds = 0);
 
     size_t maximumFragmentSize() const;
 
