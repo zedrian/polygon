@@ -1,5 +1,6 @@
 .idea/
 bin/
+lib/
 CMakeFiles/
 
 cmake_install.cmake
