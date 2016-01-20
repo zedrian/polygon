@@ -1,4 +1,6 @@
 #include <iostream>
+#include <stdexcept>
+
 #include <mbedtls/timing.h>
 
 #include "error.h"
