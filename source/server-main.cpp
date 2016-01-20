@@ -41,7 +41,7 @@ void work()
     Acceptor acceptor;
     size_t bytes_sent, bytes_received;
 
-    vector<unsigned char> buf(1024, 0x00);
+    vector<unsigned char> buffer(1024, 0x00);
     vector<unsigned char> sending_data;
 
     cout << "Enter listening address: ";
@@ -58,22 +58,21 @@ void work()
         cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
         cout << "Receiving from client: ";
-        bytes_received = incoming_socket->receive(buf);
+        bytes_received = incoming_socket->receive(buffer);
+        buffer.resize(bytes_received);
         cout << "success" << endl;
 
         sending_data = vector<unsigned char>(bytes_received);
         cout << "Received from client (" << dec << bytes_received << " bytes):" << endl;
-        showArray(buf);
-        cout << endl;
+        showArray(buffer);
 
-        processClientInput(buf, sending_data);
+        processClientInput(buffer, sending_data);
 
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
         cout << "success" << endl;
         cout << "Sent to client (" << dec << bytes_sent << " bytes):" << endl;
         showArray(sending_data);
-        cout << endl;
 
         cout << "Closing the connection: ";
         incoming_socket->close();
