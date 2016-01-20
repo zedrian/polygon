@@ -2,9 +2,9 @@
 #include <iostream>
 
 #include "acceptor.h"
+#include "utilities.h"
 
 
-using std::vector;
 using std::cin;
 using std::cout;
 using std::endl;
@@ -58,16 +58,12 @@ void work()
         cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
         cout << "Receiving from client: ";
-        bytes_received = incoming_socket->receive(buf, 0);
+        bytes_received = incoming_socket->receive(buf);
         cout << "success" << endl;
 
         sending_data = vector<unsigned char>(bytes_received);
-        cout << "Received from client (" << dec << bytes_received << " bytes): ";
-        for (int i = 0; i < bytes_received; ++i)
-        {
-            unsigned short x = buf[i];
-            cout << hex << x << " ";
-        }
+        cout << "Received from client (" << dec << bytes_received << " bytes):" << endl;
+        showArray(buf);
         cout << endl;
 
         processClientInput(buf, sending_data);
@@ -75,12 +71,8 @@ void work()
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
         cout << "success" << endl;
-        cout << "Sent to client (" << dec << bytes_sent << " bytes): ";
-        for (int i = 0; i < bytes_sent; ++i)
-        {
-            unsigned short x = sending_data[i];
-            cout << hex << x << " ";
-        }
+        cout << "Sent to client (" << dec << bytes_sent << " bytes):" << endl;
+        showArray(sending_data);
         cout << endl;
 
         cout << "Closing the connection: ";

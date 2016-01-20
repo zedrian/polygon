@@ -17,13 +17,19 @@ set(NETWORK_SOURCE
         source/error.h
         source/error.cpp
         source/socket.h
-        source/socket.cpp source/acceptor.cpp source/acceptor.h)
+        source/socket.cpp
+        source/acceptor.cpp
+        source/acceptor.h)
 
 set(CLIENT_SOURCE_FILES
-        source/client-main.cpp)
+        source/client-main.cpp
+        source/utilities.cpp
+        source/utilities.h)
 
 set(SERVER_SOURCE_FILES
-        source/server-main.cpp)
+        source/server-main.cpp
+        source/utilities.cpp
+        source/utilities.h)
 
 
 add_library(network ${NETWORK_SOURCE})
