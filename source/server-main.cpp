@@ -71,7 +71,6 @@ void work()
         cout << endl;
 
         processClientInput(buf, sending_data);
-        for(auto i = 0; i < 100000; ++i) cout << " "; cout << endl;
 
         cout << "Sending to client: ";
         bytes_sent = incoming_socket->send(sending_data);
