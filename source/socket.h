@@ -19,17 +19,6 @@ using std::string;
 using std::vector;
 
 
-/*
- * Socket interface :
- *  size_t& sendTimeout() ?
- *  size_t& receiveTimeout() ?
- *  size_t send(const unsigned char* data, size_t size)
- *  size_t receive(unsigned char* data, size_t maximum_size)
- *  size_t pendingDatagramSize() ?
- *  bool hasPendingDatagams() ?
- */
-
-
 class Socket
 {
 public:
@@ -46,11 +35,11 @@ public:
                 size_t size);
     size_t send(const vector<unsigned char>& data);
 
-    size_t receive(unsigned char* buffer,
+    size_t receive(unsigned char *buffer,
                    size_t maximum_size,
-                   size_t timeout_in_milliseconds = 0);
+                   unsigned long timeout_in_milliseconds = 0);
     size_t receive(vector<unsigned char> &buffer,
-                   size_t timeout_in_milliseconds = 0);
+                   unsigned long timeout_in_milliseconds = 0);
 
     size_t maximumFragmentSize() const;
 
