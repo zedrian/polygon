@@ -195,7 +195,7 @@ size_t Socket::receive(unsigned char *buffer,
                        size_t maximum_size,
                        size_t timeout_in_milliseconds)
 {
-
+    _ssl_configuration.read_timeout = timeout_in_milliseconds;
 
     if (buffer == nullptr)
         throw logic_error("Passed a nullptr to receive().");
