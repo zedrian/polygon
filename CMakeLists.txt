@@ -14,22 +14,22 @@ include_directories(${mbedTLS_INCLUDE_DIR})
 
 
 set(NETWORK_SOURCE
+        source/acceptor.h
+        source/acceptor.cpp
         source/error.h
         source/error.cpp
         source/socket.h
-        source/socket.cpp
-        source/acceptor.cpp
-        source/acceptor.h)
+        source/socket.cpp)
 
 set(CLIENT_SOURCE_FILES
         source/client-main.cpp
-        source/utilities.cpp
-        source/utilities.h)
+        source/utilities.h
+        source/utilities.cpp)
 
 set(SERVER_SOURCE_FILES
         source/server-main.cpp
-        source/utilities.cpp
-        source/utilities.h)
+        source/utilities.h
+        source/utilities.cpp)
 
 
 add_library(network ${NETWORK_SOURCE})
