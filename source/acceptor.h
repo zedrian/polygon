@@ -35,7 +35,4 @@ private:
     mbedtls_ctr_drbg_context _ctr_drbg_context;
     mbedtls_ssl_cache_context _cache_context;
     mbedtls_timing_delay_context _delay_context;
-
-    mbedtls_net_context _incoming_net_context;
-    mbedtls_ssl_context _incoming_ssl_context;
 };

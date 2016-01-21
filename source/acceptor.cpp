@@ -95,38 +95,38 @@ void Acceptor::listen(string address,
 shared_ptr<Socket> Acceptor::accept()
 {
     int ret;
+    mbedtls_net_context incoming_net_context;
+    mbedtls_ssl_context incoming_ssl_context;
 
     cout << "Preparing SSL context for remote connection: ";
-    mbedtls_ssl_init(&_incoming_ssl_context);
-    if ((ret = mbedtls_ssl_setup(&_incoming_ssl_context, &_ssl_configuration)) != 0)
+    mbedtls_ssl_init(&incoming_ssl_context);
+    if ((ret = mbedtls_ssl_setup(&incoming_ssl_context, &_ssl_configuration)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
-    mbedtls_ssl_set_timer_cb(&_incoming_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
+    mbedtls_ssl_set_timer_cb(&incoming_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
     cout << "success" << endl;
 
-
-    unsigned char client_ip[16] = {0};
-    size_t client_ip_length;
+    unsigned char client_address[16] = {0};
+    size_t client_address_length;
 
     do
     {
         cout << "Waiting for a remote connection: ";
-        mbedtls_net_free(&_incoming_net_context);
-        mbedtls_ssl_session_reset(&_incoming_ssl_context);
+        mbedtls_net_free(&incoming_net_context);
+        mbedtls_ssl_session_reset(&incoming_ssl_context);
 
-        if ((ret = mbedtls_net_accept(&_net_context, &_incoming_net_context, client_ip, sizeof(client_ip), &client_ip_length)) != 0)
+        if ((ret = mbedtls_net_accept(&_net_context, &incoming_net_context, client_address, sizeof(client_address), &client_address_length)) != 0)
             throw runtime_error(constructErrorMessage("mbedtls_net_accept()", ret));
 
         /* For HelloVerifyRequest cookies */
-        if ((ret = mbedtls_ssl_set_client_transport_id(&_incoming_ssl_context, client_ip, client_ip_length)) != 0)
+        if ((ret = mbedtls_ssl_set_client_transport_id(&incoming_ssl_context, client_address, client_address_length)) != 0)
             throw runtime_error(constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
 
-        mbedtls_ssl_set_bio(&_incoming_ssl_context, &_incoming_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-
+        mbedtls_ssl_set_bio(&incoming_ssl_context, &incoming_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
         cout << "success" << endl;
 
         cout << "Performing the DTLS handshake: ";
         do
-            ret = mbedtls_ssl_handshake(&_incoming_ssl_context);
+            ret = mbedtls_ssl_handshake(&incoming_ssl_context);
         while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
         if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
@@ -143,19 +143,15 @@ shared_ptr<Socket> Acceptor::accept()
         break;
     }
     while (true);
-
     cout << "success" << endl;
 
-    cout << "Client address: " << addressToString(client_ip, client_ip_length) << endl;
+    cout << "Client address: " << addressToString(client_address, client_address_length) << endl;
 
-    return make_shared<Socket>(_incoming_net_context, _incoming_ssl_context);
+    return make_shared<Socket>(incoming_net_context, incoming_ssl_context);
 }
 
 void Acceptor::close()
 {
-    mbedtls_net_free(&_incoming_net_context);
-    mbedtls_ssl_free(&_incoming_ssl_context);
-
     mbedtls_net_free(&_net_context);
     mbedtls_x509_crt_free(&_certificate);
     mbedtls_pk_free(&_public_key_context);
