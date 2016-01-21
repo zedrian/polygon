@@ -56,8 +56,10 @@ Socket::Socket(mbedtls_net_context net_context,
 {
     _net_context = net_context;
     _ssl_context = ssl_context;
-    _constructed_by_acceptor = true;
 
+    mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
+
+    _constructed_by_acceptor = true;
 }
 
 Socket::~Socket()
