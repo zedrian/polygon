@@ -24,7 +24,8 @@ class Socket
 public:
     Socket();
     Socket(mbedtls_net_context net_context,
-           mbedtls_ssl_context ssl_context);
+           mbedtls_ssl_context ssl_context,
+           mbedtls_ssl_config ssl_configuration);
     ~Socket();
 
     void connect(const string address,

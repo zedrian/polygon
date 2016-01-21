@@ -145,7 +145,7 @@ shared_ptr<Socket> Acceptor::accept()
 
     cout << "Client address: " << addressToString(client_address, client_address_length) << endl;
 
-    return make_shared<Socket>(incoming_net_context, incoming_ssl_context);
+    return make_shared<Socket>(incoming_net_context, incoming_ssl_context, _ssl_configuration);
 }
 
 void Acceptor::close()

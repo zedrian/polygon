@@ -59,7 +59,13 @@ void work()
 
         cout << "Receiving from client: ";
         buffer.resize(incoming_socket->maximumFragmentSize());
-        bytes_received = incoming_socket->receive(buffer);
+        bytes_received = incoming_socket->receive(buffer, 100);
+        if(bytes_received == 0)
+        {
+            cout << "Closing the connection." << endl;
+            continue;
+        }
+
         buffer.resize(bytes_received);
         cout << "success" << endl;
 

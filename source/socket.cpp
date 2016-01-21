@@ -52,10 +52,13 @@ Socket::Socket()
 }
 
 Socket::Socket(mbedtls_net_context net_context,
-               mbedtls_ssl_context ssl_context)
+               mbedtls_ssl_context ssl_context,
+               mbedtls_ssl_config ssl_configuration)
 {
     _net_context = net_context;
     _ssl_context = ssl_context;
+    _ssl_configuration = ssl_configuration;
+    _ssl_context.conf = &_ssl_configuration;
 
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
