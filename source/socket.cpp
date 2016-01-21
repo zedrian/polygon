@@ -177,6 +177,9 @@ size_t Socket::send(const unsigned char *data,
     if (size > maximumFragmentSize())
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
+    if(size == 0)
+        throw logic_error("Sending data with zero size is not allowed.");
+
     int bytes_sent;
     do
         bytes_sent = mbedtls_ssl_write(&_ssl_context, data, size);
