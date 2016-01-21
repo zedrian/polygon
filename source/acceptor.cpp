@@ -3,6 +3,7 @@
 
 #include "error.h"
 #include "acceptor.h"
+#include "utilities.h"
 
 
 using std::make_shared;
@@ -145,13 +146,7 @@ shared_ptr<Socket> Acceptor::accept()
 
     cout << "success" << endl;
 
-    cout << "Client address: ";
-    for (unsigned char i = 0; i < client_ip_length - 1; ++i)
-    {
-        unsigned short x = client_ip[i];
-        cout << dec << x << ".";
-    }
-    cout << dec << static_cast<unsigned short>(client_ip[client_ip_length - 1]) << endl;
+    cout << "Client address: " << addressToString(client_ip, client_ip_length) << endl;
 
     return make_shared<Socket>(_incoming_net_context, _incoming_ssl_context);
 }
