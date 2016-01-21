@@ -58,6 +58,7 @@ void work()
         cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
         cout << "Receiving from client: ";
+        buffer.resize(incoming_socket->maximumFragmentSize());
         bytes_received = incoming_socket->receive(buffer);
         buffer.resize(bytes_received);
         cout << "success" << endl;
