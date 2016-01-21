@@ -16,8 +16,6 @@ Acceptor::Acceptor()
     int ret;
 
     mbedtls_net_init(&_net_context);
-    mbedtls_net_init(&_incoming_net_context);
-
     mbedtls_ssl_config_init(&_ssl_configuration);
     mbedtls_ssl_cookie_init(&_cookie_context);
     mbedtls_ssl_cache_init(&_cache_context);
