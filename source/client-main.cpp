@@ -17,8 +17,6 @@ using std::setw;
 using std::exception;
 
 
-
-
 void work()
 {
     Socket socket;
@@ -40,16 +38,16 @@ void work()
 
     cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
     showArray(data);
-    for(auto i = 0; i < 10000; ++i) cout << ' '; cout << endl;
 
     cout << "Sending data to server: ";
     auto bytes_sent = socket.send(data);
     cout << "success (" << dec << bytes_sent << " bytes sent)" << endl;
 
-
     vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
-    auto bytes_received = socket.receive(response, 300);
+    cout << "Receiving server's response: ";
+    auto bytes_received = socket.receive(response);
     response.resize(bytes_received);
+    cout << "success" << endl;
 
     cout << "Server's response (" << dec << response.size() << " bytes):" << endl;
     showArray(response);

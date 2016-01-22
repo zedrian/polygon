@@ -19,7 +19,7 @@ set(NETWORK_SOURCE
         source/error.h
         source/error.cpp
         source/socket.h
-        source/socket.cpp)
+        source/socket.cpp source/message.cpp source/message.h source/header.cpp source/header.h)
 
 set(CLIENT_SOURCE_FILES
         source/client-main.cpp

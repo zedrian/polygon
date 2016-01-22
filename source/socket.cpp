@@ -185,15 +185,9 @@ size_t Socket::send(const unsigned char *data,
     if(size == 0)
         throw logic_error("Sending data with zero size is not allowed.");
 
-    int bytes_sent;
-    do
-        bytes_sent = mbedtls_ssl_write(&_ssl_context, data, size);
-    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (bytes_sent < 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
-
-    return bytes_sent;
+    Header header;
+    Message message(header, data, size);
+    return sendMessage(message) - sizeof(Header);
 }
 
 size_t Socket::send(const vector<unsigned char> &data)
@@ -205,33 +199,24 @@ size_t Socket::receive(unsigned char *buffer,
                        size_t maximum_size,
                        unsigned long timeout_in_milliseconds)
 {
-    _ssl_configuration.read_timeout = timeout_in_milliseconds;
-
     if (buffer == nullptr)
         throw logic_error("Passed a nullptr to receive().");
 
-    int bytes_received;
+    Message message(maximumFragmentSize());
 
-    do
-        bytes_received = mbedtls_ssl_read(&_ssl_context, buffer, maximum_size);
-    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+    auto bytes_received = receiveMessage(message, timeout_in_milliseconds);
+    if (bytes_received == 0)
+        return 0;
 
-    if (bytes_received > 0)
-        return bytes_received;
+    message.bytes().resize(bytes_received);
 
-    switch (bytes_received)
-    {
-        case MBEDTLS_ERR_SSL_TIMEOUT:
-            cout << "timeout" << endl;
-            return 0;
+    if (bytes_received - sizeof(Header) > maximum_size )
+        bytes_received = maximum_size + sizeof(Header);
 
-        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-            cout << "connection was closed gracefully" << endl;
-            return 0;
+    for(size_t i = 0; i < message.bytes().size() - sizeof(Header); ++i)
+        buffer[i] = message.data()[i];
 
-        default:
-            throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
-    }
+    return bytes_received - sizeof(Header);
 }
 
 size_t Socket::receive(vector<unsigned char> &buffer,
@@ -262,4 +247,45 @@ size_t Socket::pendingDataSize()
 bool Socket::hasPendingData()
 {
     return pendingDataSize() != 0;
+}
+
+size_t Socket::sendMessage(Message& message)
+{
+    int bytes_sent;
+    do
+        bytes_sent = mbedtls_ssl_write(&_ssl_context, message.bytes().data(), message.bytes().size());
+    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    if (bytes_sent < 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
+
+    return bytes_sent;
+}
+
+size_t Socket::receiveMessage(Message& message,
+                              unsigned long timeout_in_milliseconds)
+{
+    _ssl_configuration.read_timeout = timeout_in_milliseconds;
+
+    int bytes_received;
+    do
+        bytes_received = mbedtls_ssl_read(&_ssl_context, message.bytes().data(), message.bytes().size());
+    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    if (bytes_received > 0)
+        return bytes_received;
+
+    switch (bytes_received)
+    {
+        case MBEDTLS_ERR_SSL_TIMEOUT:
+            cout << "timeout" << endl;
+            return 0;
+
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+            cout << "connection was closed gracefully" << endl;
+            return 0;
+
+        default:
+            throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
+    }
 }

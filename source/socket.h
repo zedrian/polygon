@@ -13,6 +13,8 @@
 #include <mbedtls/certs.h>
 #include <mbedtls/error.h>
 
+#include "message.h"
+
 
 using std::size_t;
 using std::string;
@@ -49,6 +51,12 @@ public:
 
     void generateRandom(unsigned char* buffer,
                         size_t size);
+
+
+private:
+    size_t sendMessage(Message& message);
+    size_t receiveMessage(Message& message,
+                          unsigned long timeout_in_milliseconds);
 
 
 private:
