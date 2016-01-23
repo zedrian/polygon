@@ -69,4 +69,7 @@ private:
     mbedtls_entropy_context _entropy_context;
     mbedtls_ctr_drbg_context _ctr_drbg_context;
     mbedtls_timing_delay_context _delay_context;
+
+    size_t _last_sent_message_id;
+    size_t _last_received_message_id;
 };

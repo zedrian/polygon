@@ -49,6 +49,8 @@ Socket::Socket()
 
     _constructed_by_acceptor = false;
     cout << "success (" << ret << " skipped)" << endl;
+
+    _last_sent_message_id = 0;
 }
 
 Socket::Socket(mbedtls_net_context net_context,
@@ -63,6 +65,8 @@ Socket::Socket(mbedtls_net_context net_context,
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
     _constructed_by_acceptor = true;
+
+    _last_sent_message_id = 0;
 }
 
 Socket::~Socket()
@@ -185,7 +189,7 @@ size_t Socket::send(const unsigned char *data,
     if(size == 0)
         throw logic_error("Sending data with zero size is not allowed.");
 
-    Header header;
+    Header header(++_last_sent_message_id);
     Message message(header, data, size);
     return sendMessage(message) - sizeof(Header);
 }
@@ -209,6 +213,7 @@ size_t Socket::receive(unsigned char *buffer,
         return 0;
 
     message.bytes().resize(bytes_received);
+    _last_received_message_id = message.header().id();
 
     if (bytes_received - sizeof(Header) > maximum_size )
         bytes_received = maximum_size + sizeof(Header);
