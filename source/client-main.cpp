@@ -39,18 +39,21 @@ void work()
     cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
     showArray(data);
 
-    cout << "Sending data to server: ";
-    auto bytes_sent = socket.send(data);
-    cout << "success (" << dec << bytes_sent << " bytes sent)" << endl;
+    for(auto i = 0; i < 10; ++i)
+    {
+        cout << "Sending data to server: ";
+        auto bytes_sent = socket.send(data);
+        cout << "success (" << dec << bytes_sent << " bytes sent)" << endl;
 
-    vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
-    cout << "Receiving server's response: ";
-    auto bytes_received = socket.receive(response);
-    response.resize(bytes_received);
-    cout << "success" << endl;
+        vector<unsigned char> response(socket.maximumFragmentSize(), 0x00);
+        cout << "Receiving server's response: ";
+        auto bytes_received = socket.receive(response);
+        response.resize(bytes_received);
+        cout << "success" << endl;
 
-    cout << "Server's response (" << dec << response.size() << " bytes):" << endl;
-    showArray(response);
+        cout << "Server's response (" << dec << response.size() << " bytes):" << endl;
+        showArray(response);
+    }
 
     cout << "Closing the connection: ";
     socket.close();

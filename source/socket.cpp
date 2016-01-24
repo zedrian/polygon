@@ -32,7 +32,7 @@ Socket::Socket()
     mbedtls_entropy_init(&_entropy_context);
     string personalizating_vector = "dtls_client";
     if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context,
-                                     (const unsigned char *) personalizating_vector.data(),
+                                     (const unsigned char*) personalizating_vector.data(),
                                      personalizating_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
 
@@ -43,14 +43,14 @@ Socket::Socket()
      */
     cout << "Loading the CA root certificate: ";
 
-    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char *) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
+    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
     if (ret < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
     _constructed_by_acceptor = false;
     cout << "success (" << ret << " skipped)" << endl;
 
-    _last_sent_message_id = 0;
+    _last_sent_message_id = -1;
 }
 
 Socket::Socket(mbedtls_net_context net_context,
@@ -66,7 +66,8 @@ Socket::Socket(mbedtls_net_context net_context,
 
     _constructed_by_acceptor = true;
 
-    _last_sent_message_id = 0;
+    _last_sent_message_id = -1;
+    mbedtls_timing_get_timer(&_clock, 1);
 }
 
 Socket::~Socket()
@@ -94,10 +95,7 @@ void Socket::connect(const string address,
     cout << "Connecting to server: ";
 
     if ((ret = mbedtls_net_connect(&_net_context, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-    {
         throw runtime_error(constructErrorMessage("mbedtls_net_connect()", ret));
-    }
-
     cout << "success" << endl;
 
     /*
@@ -105,12 +103,9 @@ void Socket::connect(const string address,
      */
     cout << "Setting up the DTLS structure: ";
 
-    ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM,
-                                      MBEDTLS_SSL_PRESET_DEFAULT);
+    ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
-    {
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
-    }
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
@@ -161,8 +156,9 @@ void Socket::connect(const string address,
 
         throw runtime_error(vrfy_buf);
     }
-
     cout << "success" << endl;
+
+    mbedtls_timing_get_timer(&_clock, 1);
 }
 
 void Socket::close()
@@ -177,7 +173,7 @@ void Socket::close()
 }
 
 
-size_t Socket::send(const unsigned char *data,
+size_t Socket::send(const unsigned char* data,
                     size_t size)
 {
     if (data == nullptr)
@@ -186,7 +182,7 @@ size_t Socket::send(const unsigned char *data,
     if (size > maximumFragmentSize())
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
-    if(size == 0)
+    if (size == 0)
         throw logic_error("Sending data with zero size is not allowed.");
 
     Header header(++_last_sent_message_id);
@@ -194,12 +190,12 @@ size_t Socket::send(const unsigned char *data,
     return sendMessage(message) - sizeof(Header);
 }
 
-size_t Socket::send(const vector<unsigned char> &data)
+size_t Socket::send(const vector<unsigned char>& data)
 {
     return send(data.data(), data.size());
 }
 
-size_t Socket::receive(unsigned char *buffer,
+size_t Socket::receive(unsigned char* buffer,
                        size_t maximum_size,
                        unsigned long timeout_in_milliseconds)
 {
@@ -215,16 +211,17 @@ size_t Socket::receive(unsigned char *buffer,
     message.bytes().resize(bytes_received);
     _last_received_message_id = message.header().id();
 
-    if (bytes_received - sizeof(Header) > maximum_size )
+    if (bytes_received - sizeof(Header) > maximum_size)
         bytes_received = maximum_size + sizeof(Header);
 
-    for(size_t i = 0; i < message.bytes().size() - sizeof(Header); ++i)
+    for (size_t i = 0; i < message.bytes().size() - sizeof(Header); ++i)
         buffer[i] = message.data()[i];
 
+    cout << endl << "Received at local time = " << mbedtls_timing_get_timer(&_clock, 0) << endl;
     return bytes_received - sizeof(Header);
 }
 
-size_t Socket::receive(vector<unsigned char> &buffer,
+size_t Socket::receive(vector<unsigned char>& buffer,
                        unsigned long timeout_in_milliseconds)
 {
     return receive(buffer.data(), buffer.size(), timeout_in_milliseconds);
@@ -235,7 +232,7 @@ size_t Socket::maximumFragmentSize() const
     return mbedtls_ssl_get_max_frag_len(&_ssl_context);;
 }
 
-void Socket::generateRandom(unsigned char *buffer,
+void Socket::generateRandom(unsigned char* buffer,
                             size_t size)
 {
     int result;

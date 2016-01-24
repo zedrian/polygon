@@ -57,29 +57,32 @@ void work()
         auto incoming_socket = acceptor.accept();
         cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
 
-        cout << "Receiving from client: ";
-        buffer.resize(incoming_socket->maximumFragmentSize());
-        bytes_received = incoming_socket->receive(buffer, 100);
-        if(bytes_received == 0)
+        for(auto i = 0; i < 10; ++i)
         {
-            cout << "Closing the connection." << endl;
-            continue;
+            cout << "Receiving from client: ";
+            buffer.resize(incoming_socket->maximumFragmentSize());
+            bytes_received = incoming_socket->receive(buffer, 100);
+            if (bytes_received == 0)
+            {
+                cout << "Closing the connection." << endl;
+                continue;
+            }
+
+            buffer.resize(bytes_received);
+            cout << "success" << endl;
+
+            sending_data = vector<unsigned char>(bytes_received);
+            cout << "Received from client (" << dec << bytes_received << " bytes):" << endl;
+            showArray(buffer);
+
+            processClientInput(buffer, sending_data);
+
+            cout << "Sending to client: ";
+            bytes_sent = incoming_socket->send(sending_data);
+            cout << "success" << endl;
+            cout << "Sent to client (" << dec << bytes_sent << " bytes):" << endl;
+            showArray(sending_data);
         }
-
-        buffer.resize(bytes_received);
-        cout << "success" << endl;
-
-        sending_data = vector<unsigned char>(bytes_received);
-        cout << "Received from client (" << dec << bytes_received << " bytes):" << endl;
-        showArray(buffer);
-
-        processClientInput(buffer, sending_data);
-
-        cout << "Sending to client: ";
-        bytes_sent = incoming_socket->send(sending_data);
-        cout << "success" << endl;
-        cout << "Sent to client (" << dec << bytes_sent << " bytes):" << endl;
-        showArray(sending_data);
 
         cout << "Closing the connection: ";
         incoming_socket->close();
