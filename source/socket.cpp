@@ -185,7 +185,7 @@ size_t Socket::send(const unsigned char* data,
     if (size == 0)
         throw logic_error("Sending data with zero size is not allowed.");
 
-    Header header(++_last_sent_message_id);
+    Header header(++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
     Message message(header, data, size);
     return sendMessage(message) - sizeof(Header);
 }
@@ -218,6 +218,7 @@ size_t Socket::receive(unsigned char* buffer,
         buffer[i] = message.data()[i];
 
     cout << endl << "Received at local time = " << mbedtls_timing_get_timer(&_clock, 0) << endl;
+    cout << "Construction time = " << message.header().construction_time() << endl;
     return bytes_received - sizeof(Header);
 }
 
