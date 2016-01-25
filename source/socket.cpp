@@ -95,11 +95,7 @@ void Socket::connect(const string address,
         throw runtime_error(constructErrorMessage("mbedtls_net_connect()", ret));
     cout << "success" << endl;
 
-    /*
-     * 2. Setup stuff
-     */
     cout << "Setting up the DTLS structure: ";
-
     ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
     if (ret != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
@@ -120,38 +116,28 @@ void Socket::connect(const string address,
 
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_timer_cb(&_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
-
     cout << "success" << endl;
 
-    /*
-     * 4. Handshake
-     */
     cout << "Performing the SSL/TLS handshake: ";
-
     do
         ret = mbedtls_ssl_handshake(&_ssl_context);
     while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (ret != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_handshake()", ret));
-
     cout << "success" << endl;
 
-    /*
-     * 5. Verify the server certificate
-     */
     cout << "Verifying peer X.509 certificate: ";
-
     /* In real life, we would have used MBEDTLS_SSL_VERIFY_REQUIRED so that the
      * handshake would not succeed if the peer's cert is bad.  Even if we used
      * MBEDTLS_SSL_VERIFY_OPTIONAL, we would bail out here if ret != 0 */
     uint32_t flags;
     if ((flags = mbedtls_ssl_get_verify_result(&_ssl_context)) != 0)
     {
-        char vrfy_buf[512];
-        mbedtls_x509_crt_verify_info(vrfy_buf, sizeof(vrfy_buf), "", flags);
+        char verifying_buffer[512];
+        mbedtls_x509_crt_verify_info(verifying_buffer, sizeof(verifying_buffer), "", flags);
 
-        throw runtime_error(vrfy_buf);
+        throw runtime_error(verifying_buffer);
     }
     cout << "success" << endl;
 
