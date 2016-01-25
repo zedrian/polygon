@@ -58,7 +58,7 @@ Socket::Socket(mbedtls_net_context net_context,
 
     mbedtls_ctr_drbg_init(&_ctr_drbg_context);
     mbedtls_entropy_init(&_entropy_context);
-    string personalizing_vector = "Socket, constructed by Acceptor";
+    string personalizing_vector = "Socket, constructed by Acceptor at the moment = " + to_string(mbedtls_timing_hardclock());
     int ret;
     if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
