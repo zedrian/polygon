@@ -7,7 +7,6 @@
 #include "socket.h"
 
 
-using std::cin;
 using std::runtime_error;
 using std::logic_error;
 using std::exception;
