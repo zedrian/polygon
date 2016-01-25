@@ -25,30 +25,23 @@ Socket::Socket()
     mbedtls_ssl_config_init(&_ssl_configuration);
     mbedtls_x509_crt_init(&_certificate);
     mbedtls_ctr_drbg_init(&_ctr_drbg_context);
+    mbedtls_entropy_init(&_entropy_context);
 
     cout << "Seeding the random number generator: ";
-
-    mbedtls_entropy_init(&_entropy_context);
-    string personalizating_vector = "dtls_client";
-    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context,
-                                     (const unsigned char*) personalizating_vector.data(),
-                                     personalizating_vector.size())) != 0)
+    string personalizing_vector = "Socket, constructed by itself at the moment = " + to_string(mbedtls_timing_hardclock());
+    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
-
     cout << "success" << endl;
 
     /*
      * 0. Load certificates
      */
     cout << "Loading the CA root certificate: ";
-
-    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
-    if (ret < 0)
+    if ((ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len)) < 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
-
-    _constructed_by_acceptor = false;
     cout << "success (" << ret << " skipped)" << endl;
 
+    _constructed_by_acceptor = false;
     _last_sent_message_id = -1;
 }
 
