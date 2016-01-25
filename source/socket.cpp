@@ -64,6 +64,13 @@ Socket::Socket(mbedtls_net_context net_context,
 
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
 
+    mbedtls_ctr_drbg_init(&_ctr_drbg_context);
+    mbedtls_entropy_init(&_entropy_context);
+    string personalizing_vector = "Socket, constructed by Acceptor";
+    int ret;
+    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
+
     _constructed_by_acceptor = true;
 
     _last_sent_message_id = -1;
