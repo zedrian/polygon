@@ -18,8 +18,12 @@ set(NETWORK_SOURCE
         source/acceptor.cpp
         source/error.h
         source/error.cpp
+        source/header.h
+        source/header.cpp
+        source/message.h
+        source/message.cpp
         source/socket.h
-        source/socket.cpp source/message.cpp source/message.h source/header.cpp source/header.h)
+        source/socket.cpp)
 
 set(CLIENT_SOURCE_FILES
         source/client-main.cpp
