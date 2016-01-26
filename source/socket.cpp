@@ -51,6 +51,7 @@ Socket::Socket()
     cout << "success (" << ret << " skipped)" << endl;
 
     _last_sent_message_id = -1;
+    _connected = false;
 }
 
 Socket::Socket(mbedtls_net_context net_context,
@@ -68,6 +69,7 @@ Socket::Socket(mbedtls_net_context net_context,
 
     _last_sent_message_id = -1;
     mbedtls_timing_get_timer(&_clock, 1);
+    _connected = true;
 }
 
 Socket::~Socket()
@@ -159,19 +161,23 @@ void Socket::connect(const string address,
     cout << "success" << endl;
 
     mbedtls_timing_get_timer(&_clock, 1);
+    _connected = true;
 }
 
 void Socket::close()
 {
     int ret;
-
-    /* No error checking, the connection might be closed already */
     do
         ret = mbedtls_ssl_close_notify(&_ssl_context);
     while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
 
+    _connected = false;
 }
 
+bool Socket::connected() const
+{
+    return _connected;
+}
 
 size_t Socket::send(const unsigned char* data,
                     size_t size)
@@ -259,7 +265,10 @@ size_t Socket::sendMessage(Message& message)
     while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
     if (bytes_sent < 0)
+    {
+        _connected = false;
         throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
+    }
 
     return bytes_sent;
 }
@@ -285,9 +294,11 @@ size_t Socket::receiveMessage(Message& message,
 
         case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
             cout << "connection was closed gracefully" << endl;
+            _connected = false;
             return 0;
 
         default:
+            _connected = false;
             throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
     }
 }

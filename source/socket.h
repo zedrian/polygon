@@ -33,6 +33,7 @@ public:
     void connect(const string address,
                  unsigned short port);
     void close();
+    bool connected() const;
 
     size_t send(const unsigned char* data,
                 size_t size);
@@ -73,4 +74,5 @@ private:
     size_t _last_sent_message_id;
     size_t _last_received_message_id;
     mbedtls_timing_hr_time _clock;
+    bool _connected;
 };
