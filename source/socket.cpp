@@ -185,6 +185,9 @@ size_t Socket::send(const unsigned char* data,
     if (data == nullptr)
         throw logic_error("Passed a nullptr to send().");
 
+    if (!_connected)
+        throw logic_error("Can't send data via closed socket.");
+
     if (size > maximumFragmentSize())
         throw logic_error("Sending data bigger than maximum fragment size is not supported.");
 
@@ -207,6 +210,9 @@ size_t Socket::receive(unsigned char* buffer,
 {
     if (buffer == nullptr)
         throw logic_error("Passed a nullptr to receive().");
+
+    if(!_connected)
+        throw logic_error("Can't receive data from closed socket.");
 
     Message message(maximumFragmentSize());
 

@@ -39,7 +39,7 @@ void work()
     cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
     showArray(data);
 
-    for(auto i = 0; i < 10; ++i)
+    for(auto i = 0; i < 9; ++i)
     {
         cout << "Sending data to server: ";
         auto bytes_sent = socket.send(data);
