@@ -93,6 +93,9 @@ Socket::~Socket()
 void Socket::connect(const string address,
                      unsigned short port)
 {
+    if(_connected)
+        throw logic_error("Can't connect socket that is already connected.");
+
     int ret;
     cout << "Connecting to server: ";
 
