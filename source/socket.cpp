@@ -245,16 +245,6 @@ void Socket::generateRandom(unsigned char* buffer,
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_random()", result));
 }
 
-size_t Socket::pendingDataSize()
-{
-    return mbedtls_ssl_get_bytes_avail(&_ssl_context);
-}
-
-bool Socket::hasPendingData()
-{
-    return pendingDataSize() != 0;
-}
-
 size_t Socket::sendMessage(Message& message)
 {
     int bytes_sent;

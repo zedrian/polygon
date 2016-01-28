@@ -47,9 +47,6 @@ public:
 
     size_t maximumFragmentSize() const;
 
-    size_t pendingDataSize();
-    bool hasPendingData();
-
     void generateRandom(unsigned char* buffer,
                         size_t size);
 
