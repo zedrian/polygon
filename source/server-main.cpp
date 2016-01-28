@@ -40,9 +40,6 @@ void work()
 {
     Acceptor acceptor;
 
-    vector<unsigned char> sending_data(3, 0x00);
-    vector<unsigned char> buffer(10000, 0x00);
-
     cout << "Enter listening address: ";
     string listening_address;
     cin >> listening_address;
@@ -54,7 +51,7 @@ void work()
     Connection connection(acceptor.accept());
     cout << "Maximum size of a fragment for current session: " << connection.socket()->maximumFragmentSize() << endl;
 
-
+    vector<unsigned char> sending_data(3, 0x00);
     connection.setWhenReceiveLambda([&](vector<unsigned char> client_input)
                                     {
                                         cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
