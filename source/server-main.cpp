@@ -67,6 +67,7 @@ void work()
                                     });
 
     while(connection.connected());
+    cout << "Connection closed. Exiting." << endl;
 }
 
 
