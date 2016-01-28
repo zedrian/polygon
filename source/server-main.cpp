@@ -66,12 +66,7 @@ void work()
                                         showArray(sending_data);
                                     });
 
-    int x = 1;
-    while ((x != 0) && connection.connected())
-    {
-        cout << "Enter 0 to exit." << endl;
-        cin >> x;
-    }
+    while(connection.connected());
 }
 
 

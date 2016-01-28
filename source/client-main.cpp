@@ -18,39 +18,90 @@ using std::exception;
 using std::make_shared;
 
 
+unsigned short chooseMenuAction()
+{
+    cout << "Choose an action:" << endl;
+    cout << "1. Connect to server" << endl;
+    cout << "2. Generate new data" << endl;
+    cout << "3. Send data to server" << endl;
+    cout << "4. Receive data from server" << endl;
+    cout << "0. Exit" << endl;
+    cout << endl;
+    cout << "Your choice: ";
+
+    unsigned short choice;
+    cin >> choice;
+    return choice;
+}
+
 void work()
 {
-    string server_address;
+    shared_ptr<Connection> connection;
+    string address;
     unsigned int port;
-    cout << "Enter server IP: ";
-    cin >> server_address;
-    cout << "Enter server port: ";
-    cin >> port;
-
-    Connection connection(server_address, port);
-    cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
-
+    vector<unsigned char> data;
+    vector<unsigned char> server_data;
     unsigned char data_size;
-    connection.generateRandom(&data_size, 1);
-    vector<unsigned char> data(data_size, 0x00);
-    connection.generateRandom(data.data(), data_size);
 
-    cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
-    showArray(data);
-
-    vector<unsigned char> response;
-    for(auto i = 0; i < 9; ++i)
+    unsigned short action = 1;
+    while (action != 0)
     {
-        cout << "Sending data to server: ";
-        connection.send(data);
-        cout << "success" << endl;
+        action = chooseMenuAction();
 
-        cout << "Receiving server's response: ";
-        response = connection.receive();
-        cout << "success" << endl;
+        switch (action)
+        {
+            case 1:
+                cout << "Enter server IP: ";
+                cin >> address;
+                cout << "Enter server port: ";
+                cin >> port;
 
-        cout << "Server's response (" << dec << response.size() << " bytes):" << endl;
-        showArray(response);
+                connection = make_shared<Connection>(address, port);
+                cout << "Maximum size of a fragment for current session: " << connection->maximumMessageSize() << endl;
+                break;
+
+            case 2:
+                connection->generateRandom(&data_size, 1);
+                data.resize(data_size);
+                connection->generateRandom(data.data(), data_size);
+                cout << "Generated data (" << dec << data.size() << " bytes):" << endl;
+                showArray(data);
+                break;
+
+            case 3:
+                cout << "Sending data to server: ";
+                connection->send(data);
+                cout << "success" << endl;
+                break;
+
+            case 4:
+                cout << "Enter timeout in milliseconds (0 for waiting forever): ";
+                unsigned long timeout;
+                cin >> timeout;
+
+                cout << "Receiving data from server: ";
+                server_data = connection->receive(timeout);
+                if (server_data.size() != 0)
+                {
+                    cout << "success" << endl;
+                    cout << "Received from server (" << dec << server_data.size() << " bytes):" << endl;
+                    showArray(server_data);
+                    break;
+                }
+                if(connection->connected())
+                {
+                    cout << "timeout" << endl;
+                    break;
+                }
+
+            case 0:
+                cout << "Exiting." << endl;
+                break;
+
+            default:
+                cout << "Unrecognized action. Exiting." << endl;
+                break;
+        }
     }
 }
 
