@@ -56,7 +56,9 @@ void work()
                 cout << "Enter server port: ";
                 cin >> port;
 
+                cout << "Connecting to server: ";
                 connection = make_shared<Connection>(address, port);
+                cout << "success" << endl;
                 cout << "Maximum size of a fragment for current session: " << connection->maximumMessageSize() << endl;
                 break;
 
