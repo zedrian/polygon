@@ -2,6 +2,7 @@
 #include <iostream>
 
 #include "acceptor.h"
+#include "connection.h"
 #include "utilities.h"
 
 
@@ -19,7 +20,6 @@ using std::make_shared;
 void processClientInput(vector<unsigned char>& input,
                         vector<unsigned char>& result)
 {
-    result = vector<unsigned char>(3, 0x00);
     unsigned char minimum = input[0], maximum = input[0], sum = 0;
 
     for (auto& x : input)
@@ -39,10 +39,9 @@ void processClientInput(vector<unsigned char>& input,
 void work()
 {
     Acceptor acceptor;
-    size_t bytes_sent, bytes_received;
 
-    vector<unsigned char> buffer(1024, 0x00);
-    vector<unsigned char> sending_data;
+    vector<unsigned char> client_input;
+    vector<unsigned char> sending_data(3, 0x00);
 
     cout << "Enter listening address: ";
     string listening_address;
@@ -52,37 +51,26 @@ void work()
     cin >> port;
     acceptor.listen(listening_address, port);
 
-    auto incoming_socket = acceptor.accept();
-    cout << "Maximum size of a fragment for current session: " << incoming_socket->maximumFragmentSize() << endl;
+    Connection connection(acceptor.accept());
+    cout << "Maximum size of a fragment for current session: " << connection.socket()->maximumFragmentSize() << endl;
 
     for (auto i = 0; i < 10; ++i)
     {
-        if(!incoming_socket->connected())
-            break;
-
         cout << "Receiving from client: ";
-        buffer.resize(incoming_socket->maximumFragmentSize());
-        bytes_received = incoming_socket->receive(buffer, 100);
-
-        buffer.resize(bytes_received);
+        client_input = connection.receive(100);
         cout << "success" << endl;
 
-        sending_data = vector<unsigned char>(bytes_received);
-        cout << "Received from client (" << dec << bytes_received << " bytes):" << endl;
-        showArray(buffer);
+        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
+        showArray(client_input);
 
-        processClientInput(buffer, sending_data);
+        processClientInput(client_input, sending_data);
 
         cout << "Sending to client: ";
-        bytes_sent = incoming_socket->send(sending_data);
+        connection.send(sending_data);
         cout << "success" << endl;
-        cout << "Sent to client (" << dec << bytes_sent << " bytes):" << endl;
+        cout << "Sent to client:" << endl;
         showArray(sending_data);
     }
-
-    cout << "Closing the connection: ";
-    incoming_socket->close();
-    cout << "success" << endl;
 }
 
 

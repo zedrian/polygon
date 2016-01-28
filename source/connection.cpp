@@ -59,12 +59,7 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
     vector<unsigned char> buffer(_socket->maximumFragmentSize(), 0x00);
 
     auto bytes_received = _socket->receive(buffer, timeout_in_milliseconds);
-    if (bytes_received == 0)
-    {
-        _socket->close();
-        return vector<unsigned char>();
-    }
-
     buffer.resize(bytes_received);
+
     return buffer;
 }
