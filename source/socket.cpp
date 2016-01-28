@@ -13,7 +13,6 @@ using std::exception;
 
 Socket::Socket()
 {
-    int ret;
     mbedtls_debug_set_threshold(0);
 
     mbedtls_net_init(&_net_context);
@@ -24,11 +23,12 @@ Socket::Socket()
     mbedtls_entropy_init(&_entropy_context);
 
     string personalizing_vector = "Socket, constructed by itself at the moment = " + to_string(mbedtls_timing_hardclock());
-    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
+    int result;
+    if ((result = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", result));
 
-    if ((ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len)) < 0)
-        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
+    if ((result = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len)) < 0)
+        throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", result));
 
     _constructed_by_acceptor = false;
     _last_sent_message_id = -1;
@@ -49,9 +49,9 @@ Socket::Socket(mbedtls_net_context net_context,
     mbedtls_ctr_drbg_init(&_ctr_drbg_context);
     mbedtls_entropy_init(&_entropy_context);
     string personalizing_vector = "Socket, constructed by Acceptor at the moment = " + to_string(mbedtls_timing_hardclock());
-    int ret;
-    if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
+    int result;
+    if ((result = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) personalizing_vector.data(), personalizing_vector.size())) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", result));
 
     _constructed_by_acceptor = true;
 
@@ -81,14 +81,14 @@ void Socket::connect(const string address,
     if(_connected)
         throw logic_error("Can't connect socket that is already connected.");
 
-    int ret;
+    int result;
 
-    if ((ret = mbedtls_net_connect(&_net_context, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_net_connect()", ret));
+    if ((result = mbedtls_net_connect(&_net_context, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_net_connect()", result));
 
-    ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
-    if (ret != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
+    result = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_CLIENT, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT);
+    if (result != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", result));
 
     /* OPTIONAL is usually a bad choice for security, but makes interop easier
      * in this simplified example, in which the ca chain is hardcoded.
@@ -98,21 +98,21 @@ void Socket::connect(const string address,
     mbedtls_ssl_conf_rng(&_ssl_configuration, mbedtls_ctr_drbg_random, &_ctr_drbg_context);
     mbedtls_ssl_conf_dbg(&_ssl_configuration, simpleDebug, stdout);
 
-    if ((ret = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
+    if ((result = mbedtls_ssl_setup(&_ssl_context, &_ssl_configuration)) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", result));
 
-    if ((ret = mbedtls_ssl_set_hostname(&_ssl_context, "localhost")) != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", ret));
+    if ((result = mbedtls_ssl_set_hostname(&_ssl_context, "localhost")) != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_set_hostname()", result));
 
     mbedtls_ssl_set_bio(&_ssl_context, &_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
     mbedtls_ssl_set_timer_cb(&_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
 
     do
-        ret = mbedtls_ssl_handshake(&_ssl_context);
-    while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
+        result = mbedtls_ssl_handshake(&_ssl_context);
+    while (result == MBEDTLS_ERR_SSL_WANT_READ || result == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    if (ret != 0)
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_handshake()", ret));
+    if (result != 0)
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_handshake()", result));
 
     /* In real life, we would have used MBEDTLS_SSL_VERIFY_REQUIRED so that the
      * handshake would not succeed if the peer's cert is bad.  Even if we used
@@ -135,10 +135,10 @@ void Socket::close()
     if(!_connected)
         return;
 
-    int ret;
+    int result;
     do
-        ret = mbedtls_ssl_close_notify(&_ssl_context);
-    while (ret == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
+        result = mbedtls_ssl_close_notify(&_ssl_context);
+    while (result == MBEDTLS_ERR_SSL_WANT_WRITE); // TODO: check all possible results
 
     _connected = false;
 }
