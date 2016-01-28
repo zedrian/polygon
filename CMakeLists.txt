@@ -16,6 +16,8 @@ include_directories(${mbedTLS_INCLUDE_DIR})
 set(NETWORK_SOURCE
         source/acceptor.h
         source/acceptor.cpp
+        source/connection.h
+        source/connection.cpp
         source/error.h
         source/error.cpp
         source/header.h

@@ -154,6 +154,9 @@ void Socket::connect(const string address,
 
 void Socket::close()
 {
+    if(!_connected)
+        return;
+
     int ret;
     do
         ret = mbedtls_ssl_close_notify(&_ssl_context);
