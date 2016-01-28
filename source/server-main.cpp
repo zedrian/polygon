@@ -49,7 +49,7 @@ void work()
     acceptor.listen(listening_address, port);
 
     Connection connection(acceptor.accept());
-    cout << "Maximum size of a fragment for current session: " << connection.socket()->maximumFragmentSize() << endl;
+    cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 
     vector<unsigned char> sending_data(3, 0x00);
     connection.setWhenReceiveLambda([&](vector<unsigned char> client_input)

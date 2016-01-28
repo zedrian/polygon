@@ -45,11 +45,6 @@ void Connection::close()
     _socket->close();
 }
 
-shared_ptr<Socket> Connection::socket() const
-{
-    return _socket;
-}
-
 void Connection::send(vector<unsigned char>& data)
 {
     _socket->send(data);
@@ -74,16 +69,27 @@ void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
                                      vector<unsigned char> buffer;
                                      size_t bytes_received;
 
-                                     while(_socket->connected())
+                                     while (_socket->connected())
                                      {
                                          buffer.resize(_socket->maximumFragmentSize());
                                          bytes_received = _socket->receive(buffer, 10);
-                                         if(bytes_received != 0)
+                                         if (bytes_received != 0)
                                          {
                                              buffer.resize(bytes_received);
-                                            _when_receive_lambda(buffer);
+                                             _when_receive_lambda(buffer);
                                          }
                                      }
                                  });
     _for_receive_waiter.detach();
+}
+
+void Connection::generateRandom(unsigned char* buffer,
+                                size_t size)
+{
+    _socket->generateRandom(buffer, size);
+}
+
+size_t Connection::maximumMessageSize() const
+{
+    return _socket->maximumFragmentSize() - sizeof(Header);
 }

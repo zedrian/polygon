@@ -28,12 +28,12 @@ void work()
     cin >> port;
 
     Connection connection(server_address, port);
-    cout << "Maximum size of a fragment for current session: " << connection.socket()->maximumFragmentSize() << endl;
+    cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 
     unsigned char data_size;
-    connection.socket()->generateRandom(&data_size, 1);
+    connection.generateRandom(&data_size, 1);
     vector<unsigned char> data(data_size, 0x00);
-    connection.socket()->generateRandom(data.data(), data_size);
+    connection.generateRandom(data.data(), data_size);
 
     cout << "Data to send to server (" << dec << data.size() << " bytes):" << endl;
     showArray(data);

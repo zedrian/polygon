@@ -26,12 +26,14 @@ public:
     bool connected() const;
     void close();
 
-    shared_ptr<Socket> socket() const;
-
     void send(vector<unsigned char>& data);
     vector<unsigned char> receive(unsigned long timeout_in_milliseconds = 0);
 
     void setWhenReceiveLambda(WhenReceiveLambda lambda);
+
+    void generateRandom(unsigned char* buffer,
+                        size_t size);
+    size_t maximumMessageSize() const;
 
 
 private:
