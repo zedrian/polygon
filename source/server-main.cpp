@@ -40,8 +40,8 @@ void work()
 {
     Acceptor acceptor;
 
-    vector<unsigned char> client_input;
     vector<unsigned char> sending_data(3, 0x00);
+    vector<unsigned char> buffer(10000, 0x00);
 
     cout << "Enter listening address: ";
     string listening_address;
@@ -54,22 +54,26 @@ void work()
     Connection connection(acceptor.accept());
     cout << "Maximum size of a fragment for current session: " << connection.socket()->maximumFragmentSize() << endl;
 
-    for (auto i = 0; i < 10; ++i)
+
+    connection.setWhenReceiveLambda([&](vector<unsigned char> client_input)
+                                    {
+                                        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
+                                        showArray(client_input);
+
+                                        processClientInput(client_input, sending_data);
+
+                                        cout << "Sending to client: ";
+                                        connection.send(sending_data);
+                                        cout << "success" << endl;
+                                        cout << "Sent to client:" << endl;
+                                        showArray(sending_data);
+                                    });
+
+    int x = 1;
+    while ((x != 0) && connection.connected())
     {
-        cout << "Receiving from client: ";
-        client_input = connection.receive(100);
-        cout << "success" << endl;
-
-        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
-        showArray(client_input);
-
-        processClientInput(client_input, sending_data);
-
-        cout << "Sending to client: ";
-        connection.send(sending_data);
-        cout << "success" << endl;
-        cout << "Sent to client:" << endl;
-        showArray(sending_data);
+        cout << "Enter 0 to exit." << endl;
+        cin >> x;
     }
 }
 

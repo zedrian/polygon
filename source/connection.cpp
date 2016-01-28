@@ -7,6 +7,7 @@ using std::make_shared;
 using std::logic_error;
 using std::to_string;
 using std::runtime_error;
+using std::this_thread::sleep_for;
 
 
 Connection::Connection(string address,
@@ -15,7 +16,7 @@ Connection::Connection(string address,
     _socket = make_shared<Socket>();
     _socket->connect(address, port);
 
-    if(!_socket->connected())
+    if (!_socket->connected())
         throw runtime_error("Failed to establish connection to " + address + ":" + to_string(port) + ".");
 }
 
@@ -62,4 +63,27 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
     buffer.resize(bytes_received);
 
     return buffer;
+}
+
+void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
+{
+    _when_receive_lambda = lambda;
+
+    _for_receive_waiter = thread([&]()
+                                 {
+                                     vector<unsigned char> buffer;
+                                     size_t bytes_received;
+
+                                     while(_socket->connected())
+                                     {
+                                         buffer.resize(_socket->maximumFragmentSize());
+                                         bytes_received = _socket->receive(buffer, 10);
+                                         if(bytes_received != 0)
+                                         {
+                                             buffer.resize(bytes_received);
+                                            _when_receive_lambda(buffer);
+                                         }
+                                     }
+                                 });
+    _for_receive_waiter.detach();
 }
