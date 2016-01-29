@@ -28,16 +28,13 @@ Acceptor::Acceptor()
      * Instead, you may want to use mbedtls_x509_crt_parse_file() to read the
      * server and CA certificates, as well as mbedtls_pk_parse_keyfile().
      */
-    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_srv_crt, mbedtls_test_srv_crt_len);
-    if (ret != 0)
+    if ((ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_srv_crt, mbedtls_test_srv_crt_len)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
-    ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len);
-    if (ret != 0)
+    if ((ret = mbedtls_x509_crt_parse(&_certificate, (const unsigned char*) mbedtls_test_cas_pem, mbedtls_test_cas_pem_len)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", ret));
 
-    ret = mbedtls_pk_parse_key(&_public_key_context, (const unsigned char*) mbedtls_test_srv_key, mbedtls_test_srv_key_len, NULL, 0);
-    if (ret != 0)
+    if ((ret = mbedtls_pk_parse_key(&_public_key_context, (const unsigned char*) mbedtls_test_srv_key, mbedtls_test_srv_key_len, NULL, 0)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_pk_parse_key()", ret));
 
 
@@ -107,15 +104,8 @@ shared_ptr<Socket> Acceptor::accept()
         do
             ret = mbedtls_ssl_handshake(&incoming_ssl_context);
         while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-        if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
-            continue;
-        else if (ret != 0)
-            continue;
-
-        break;
     }
-    while (true);
+    while (ret != 0);
 
     return make_shared<Socket>(incoming_net_context, incoming_ssl_context, _ssl_configuration);
 }
