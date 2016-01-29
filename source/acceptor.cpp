@@ -1,4 +1,3 @@
-#include <iomanip>
 #include <stdexcept>
 
 #include "error.h"
@@ -7,7 +6,6 @@
 
 
 using std::make_shared;
-using std::dec;
 using std::runtime_error;
 
 
@@ -25,7 +23,6 @@ Acceptor::Acceptor()
     mbedtls_ctr_drbg_init(&_ctr_drbg_context);
     mbedtls_debug_set_threshold(0);
 
-    cout << "Loading server certificate and key: ";
     /*
      * This demonstration program uses embedded test certificates.
      * Instead, you may want to use mbedtls_x509_crt_parse_file() to read the
@@ -43,16 +40,11 @@ Acceptor::Acceptor()
     if (ret != 0)
         throw runtime_error(constructErrorMessage("mbedtls_pk_parse_key()", ret));
 
-    cout << "success" << endl;
 
-
-    cout << "Seeding the random number generator: ";
     string seeding_vector = "dtls_server";
     if ((ret = mbedtls_ctr_drbg_seed(&_ctr_drbg_context, mbedtls_entropy_func, &_entropy_context, (const unsigned char*) seeding_vector.data(), seeding_vector.size())) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", ret));
-    cout << "success" << endl;
 
-    cout << "Setting up the DTLS data: ";
     if ((ret = mbedtls_ssl_config_defaults(&_ssl_configuration, MBEDTLS_SSL_IS_SERVER, MBEDTLS_SSL_TRANSPORT_DATAGRAM, MBEDTLS_SSL_PRESET_DEFAULT)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_config_defaults()", ret));
 
@@ -69,8 +61,6 @@ Acceptor::Acceptor()
         throw runtime_error(constructErrorMessage("mbedtls_ssl_cookie_setup()", ret));
 
     mbedtls_ssl_conf_dtls_cookies(&_ssl_configuration, mbedtls_ssl_cookie_write, mbedtls_ssl_cookie_check, &_cookie_context);
-
-    cout << "success" << endl;
 }
 
 Acceptor::~Acceptor()
@@ -81,13 +71,9 @@ Acceptor::~Acceptor()
 void Acceptor::listen(string address,
                       unsigned short port)
 {
-    cout << "Binding on UDP: ";
-
     int ret;
     if ((ret = mbedtls_net_bind(&_net_context, address.data(), to_string(port).data(), MBEDTLS_NET_PROTO_UDP)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_net_bind()", ret));
-
-    cout << "success" << endl;
 }
 
 shared_ptr<Socket> Acceptor::accept()
@@ -96,19 +82,16 @@ shared_ptr<Socket> Acceptor::accept()
     mbedtls_net_context incoming_net_context;
     mbedtls_ssl_context incoming_ssl_context;
 
-    cout << "Preparing SSL context for remote connection: ";
     mbedtls_ssl_init(&incoming_ssl_context);
     if ((ret = mbedtls_ssl_setup(&incoming_ssl_context, &_ssl_configuration)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ssl_setup()", ret));
     mbedtls_ssl_set_timer_cb(&incoming_ssl_context, &_delay_context, mbedtls_timing_set_delay, mbedtls_timing_get_delay);
-    cout << "success" << endl;
 
     unsigned char client_address[16] = {0};
     size_t client_address_length;
 
     do
     {
-        cout << "Waiting for a remote connection: ";
         mbedtls_net_free(&incoming_net_context);
         mbedtls_ssl_session_reset(&incoming_ssl_context);
 
@@ -120,30 +103,19 @@ shared_ptr<Socket> Acceptor::accept()
             throw runtime_error(constructErrorMessage("mbedtls_ssl_set_client_transport_id()", ret));
 
         mbedtls_ssl_set_bio(&incoming_ssl_context, &incoming_net_context, mbedtls_net_send, mbedtls_net_recv, mbedtls_net_recv_timeout);
-        cout << "success" << endl;
 
-        cout << "Performing the DTLS handshake: ";
         do
             ret = mbedtls_ssl_handshake(&incoming_ssl_context);
         while (ret == MBEDTLS_ERR_SSL_WANT_READ || ret == MBEDTLS_ERR_SSL_WANT_WRITE);
 
         if (ret == MBEDTLS_ERR_SSL_HELLO_VERIFY_REQUIRED)
-        {
-            cout << "hello verification requested" << endl;
             continue;
-        }
         else if (ret != 0)
-        {
-            cout << constructErrorMessage("mbedtls_ssl_handshake()", ret) << endl;
             continue;
-        }
 
         break;
     }
     while (true);
-    cout << "success" << endl;
-
-    cout << "Client address: " << addressToString(client_address, client_address_length) << endl;
 
     return make_shared<Socket>(incoming_net_context, incoming_ssl_context, _ssl_configuration);
 }
