@@ -1,5 +1,6 @@
 #include <stdexcept>
 
+#include "message.h"
 #include "connection.h"
 
 
@@ -18,6 +19,9 @@ Connection::Connection(string address,
 
     if (!_socket->connected())
         throw runtime_error("Failed to establish connection to " + address + ":" + to_string(port) + ".");
+
+    mbedtls_timing_get_timer(&_clock, 1);
+    _last_sent_message_id = 0;
 }
 
 Connection::Connection(shared_ptr<Socket> socket_from_acceptor) :
@@ -28,6 +32,9 @@ Connection::Connection(shared_ptr<Socket> socket_from_acceptor) :
 
     if (!_socket->connected())
         throw logic_error("Connection can not be initialized with closed socket.");
+
+    mbedtls_timing_get_timer(&_clock, 1);
+    _last_sent_message_id = 0;
 }
 
 Connection::~Connection()
@@ -47,17 +54,23 @@ void Connection::close()
 
 void Connection::send(vector<unsigned char>& data)
 {
-    _socket->send(data);
+    Header header(++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
+    Message message(header, data.data(), data.size());
+
+    _socket->send(message.bytes());
 }
 
 vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 {
     vector<unsigned char> buffer(_socket->maximumFragmentSize(), 0x00);
 
-    auto bytes_received = _socket->receive(buffer, timeout_in_milliseconds);
-    buffer.resize(bytes_received);
+    if(_socket->receive(buffer, timeout_in_milliseconds) == 0)
+        return vector<unsigned char>();
 
-    return buffer;
+    Message message(buffer);
+    _last_received_message_id = message.header().id();
+
+    return message.data();
 }
 
 void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
@@ -65,21 +78,16 @@ void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
     _when_receive_lambda = lambda;
 
     _for_receive_waiter = thread([&]()
-                                 {
-                                     vector<unsigned char> buffer;
-                                     size_t bytes_received;
+     {
+         vector<unsigned char> data;
 
-                                     while (_socket->connected())
-                                     {
-                                         buffer.resize(_socket->maximumFragmentSize());
-                                         bytes_received = _socket->receive(buffer, 10);
-                                         if (bytes_received != 0)
-                                         {
-                                             buffer.resize(bytes_received);
-                                             _when_receive_lambda(buffer);
-                                         }
-                                     }
-                                 });
+         while (_socket->connected())
+         {
+             data = receive(10);
+             if (!data.empty())
+                 _when_receive_lambda(data);
+         }
+     });
     _for_receive_waiter.detach();
 }
 

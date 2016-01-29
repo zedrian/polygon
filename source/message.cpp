@@ -16,14 +16,19 @@ Message::Message(size_t total_size)
     _bytes.resize(total_size);
 }
 
+Message::Message(vector<unsigned char>& buffer)
+{
+    _bytes = buffer;
+}
+
 Header Message::header() const
 {
     return *reinterpret_cast<const Header*>(&_bytes[0]);
 }
 
-unsigned char* Message::data()
+vector<unsigned char> Message::data()
 {
-    return &_bytes[sizeof(Header)];
+    return vector<unsigned char>(_bytes.end() - _bytes.size() + sizeof(Header), _bytes.end());
 }
 
 vector<unsigned char>& Message::bytes()

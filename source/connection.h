@@ -41,4 +41,8 @@ private:
 
     thread _for_receive_waiter;
     WhenReceiveLambda _when_receive_lambda;
+
+    size_t _last_sent_message_id;
+    size_t _last_received_message_id;
+    mbedtls_timing_hr_time _clock;
 };

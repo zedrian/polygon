@@ -13,8 +13,6 @@
 #include <mbedtls/certs.h>
 #include <mbedtls/error.h>
 
-#include "message.h"
-
 
 using std::size_t;
 using std::string;
@@ -35,13 +33,7 @@ public:
     void close();
     bool connected() const;
 
-    size_t send(const unsigned char* data,
-                size_t size);
     size_t send(const vector<unsigned char>& data);
-
-    size_t receive(unsigned char *buffer,
-                   size_t maximum_size,
-                   unsigned long timeout_in_milliseconds = 0);
     size_t receive(vector<unsigned char> &buffer,
                    unsigned long timeout_in_milliseconds = 0);
 
@@ -49,12 +41,6 @@ public:
 
     void generateRandom(unsigned char* buffer,
                         size_t size);
-
-
-private:
-    size_t sendMessage(Message& message);
-    size_t receiveMessage(Message& message,
-                          unsigned long timeout_in_milliseconds);
 
 
 private:
@@ -68,8 +54,5 @@ private:
     mbedtls_ctr_drbg_context _ctr_drbg_context;
     mbedtls_timing_delay_context _delay_context;
 
-    size_t _last_sent_message_id;
-    size_t _last_received_message_id;
-    mbedtls_timing_hr_time _clock;
     bool _connected;
 };

@@ -31,7 +31,6 @@ Socket::Socket()
         throw runtime_error(constructErrorMessage("mbedtls_x509_crt_parse()", result));
 
     _constructed_by_acceptor = false;
-    _last_sent_message_id = -1;
     _connected = false;
 }
 
@@ -54,9 +53,6 @@ Socket::Socket(mbedtls_net_context net_context,
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_seed()", result));
 
     _constructed_by_acceptor = true;
-
-    _last_sent_message_id = -1;
-    mbedtls_timing_get_timer(&_clock, 1);
     _connected = true;
 }
 
@@ -78,7 +74,7 @@ Socket::~Socket()
 void Socket::connect(const string address,
                      unsigned short port)
 {
-    if(_connected)
+    if (_connected)
         throw logic_error("Can't connect socket that is already connected.");
 
     int result;
@@ -126,13 +122,12 @@ void Socket::connect(const string address,
         throw runtime_error(verifying_buffer);
     }
 
-    mbedtls_timing_get_timer(&_clock, 1);
     _connected = true;
 }
 
 void Socket::close()
 {
-    if(!_connected)
+    if (!_connected)
         return;
 
     int result;
@@ -148,63 +143,61 @@ bool Socket::connected() const
     return _connected;
 }
 
-size_t Socket::send(const unsigned char* data,
-                    size_t size)
+size_t Socket::send(const vector<unsigned char>& data)
 {
-    if (data == nullptr)
-        throw logic_error("Passed a nullptr to send().");
-
     if (!_connected)
         throw logic_error("Can't send data via closed socket.");
 
-    if (size > maximumFragmentSize())
-        throw logic_error("Sending data bigger than maximum fragment size is not supported.");
+    if (data.size() == 0)
+        throw logic_error("Sending data of zero size is not allowed.");
 
-    if (size == 0)
-        throw logic_error("Sending data with zero size is not allowed.");
+    int bytes_sent;
+    do
+        bytes_sent = mbedtls_ssl_write(&_ssl_context, data.data(), data.size());
+    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
 
-    Header header(++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
-    Message message(header, data, size);
-    return sendMessage(message) - sizeof(Header);
-}
+    if (bytes_sent < 0)
+    {
+        _connected = false;
+        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
+    }
 
-size_t Socket::send(const vector<unsigned char>& data)
-{
-    return send(data.data(), data.size());
-}
-
-size_t Socket::receive(unsigned char* buffer,
-                       size_t maximum_size,
-                       unsigned long timeout_in_milliseconds)
-{
-    if (buffer == nullptr)
-        throw logic_error("Passed a nullptr to receive().");
-
-    if(!_connected)
-        throw logic_error("Can't receive data from closed socket.");
-
-    Message message(maximumFragmentSize());
-
-    auto bytes_received = receiveMessage(message, timeout_in_milliseconds);
-    if (bytes_received == 0)
-        return 0;
-
-    message.bytes().resize(bytes_received);
-    _last_received_message_id = message.header().id();
-
-    if (bytes_received - sizeof(Header) > maximum_size)
-        bytes_received = maximum_size + sizeof(Header);
-
-    for (size_t i = 0; i < message.bytes().size() - sizeof(Header); ++i)
-        buffer[i] = message.data()[i];
-
-    return bytes_received - sizeof(Header);
+    return bytes_sent;
 }
 
 size_t Socket::receive(vector<unsigned char>& buffer,
                        unsigned long timeout_in_milliseconds)
 {
-    return receive(buffer.data(), buffer.size(), timeout_in_milliseconds);
+    if (!_connected)
+        throw logic_error("Can't receive data from closed socket.");
+
+    _ssl_configuration.read_timeout = timeout_in_milliseconds;
+
+    int bytes_received;
+    do
+        bytes_received = mbedtls_ssl_read(&_ssl_context, buffer.data(), buffer.size());
+    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
+
+    if (bytes_received >= 0)
+    {
+        buffer.resize(bytes_received);
+        return bytes_received;
+    }
+
+    switch (bytes_received)
+    {
+        case MBEDTLS_ERR_SSL_TIMEOUT:
+            buffer.resize(0);
+            return 0;
+
+        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
+            _connected = false;
+            return 0;
+
+        default:
+            _connected = false;
+            throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
+    }
 }
 
 size_t Socket::maximumFragmentSize() const
@@ -219,48 +212,4 @@ void Socket::generateRandom(unsigned char* buffer,
 
     if ((result = mbedtls_ctr_drbg_random(&_ctr_drbg_context, buffer, size)) != 0)
         throw runtime_error(constructErrorMessage("mbedtls_ctr_drbg_random()", result));
-}
-
-size_t Socket::sendMessage(Message& message)
-{
-    int bytes_sent;
-    do
-        bytes_sent = mbedtls_ssl_write(&_ssl_context, message.bytes().data(), message.bytes().size());
-    while (bytes_sent == MBEDTLS_ERR_SSL_WANT_READ || bytes_sent == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (bytes_sent < 0)
-    {
-        _connected = false;
-        throw runtime_error(constructErrorMessage("mbedtls_ssl_write()", bytes_sent));
-    }
-
-    return bytes_sent;
-}
-
-size_t Socket::receiveMessage(Message& message,
-                              unsigned long timeout_in_milliseconds)
-{
-    _ssl_configuration.read_timeout = timeout_in_milliseconds;
-
-    int bytes_received;
-    do
-        bytes_received = mbedtls_ssl_read(&_ssl_context, message.bytes().data(), message.bytes().size());
-    while (bytes_received == MBEDTLS_ERR_SSL_WANT_READ || bytes_received == MBEDTLS_ERR_SSL_WANT_WRITE);
-
-    if (bytes_received > 0)
-        return bytes_received;
-
-    switch (bytes_received)
-    {
-        case MBEDTLS_ERR_SSL_TIMEOUT:
-            return 0;
-
-        case MBEDTLS_ERR_SSL_PEER_CLOSE_NOTIFY:
-            _connected = false;
-            return 0;
-
-        default:
-            _connected = false;
-            throw runtime_error(constructErrorMessage("mbedtls_ssl_read()", bytes_received));
-    }
 }

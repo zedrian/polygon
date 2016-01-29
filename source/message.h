@@ -17,9 +17,10 @@ public:
             const unsigned char* data,
             size_t size);
     Message(size_t total_size);
+    Message(vector<unsigned char>& buffer);
 
     Header header() const;
-    unsigned char* data();
+    vector<unsigned char> data();
     vector<unsigned char>& bytes();
 
 
