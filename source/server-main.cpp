@@ -48,7 +48,9 @@ void work()
     cin >> port;
     acceptor.listen(listening_address, port);
 
+    cout << "Waiting for remote connection: ";
     Connection connection(acceptor.accept());
+    cout << "success" << endl;
     cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 
     vector<unsigned char> sending_data(3, 0x00);
