@@ -14,10 +14,8 @@ class Message
 {
 public:
     Message(Header header,
-            const unsigned char* data,
-            size_t size);
-    Message(size_t total_size);
-    Message(vector<unsigned char>& buffer);
+            const vector<unsigned char>& data);
+    Message(vector<unsigned char>& bytes);
 
     Header header() const;
     vector<unsigned char> data();

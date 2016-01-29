@@ -55,7 +55,7 @@ void Connection::close()
 void Connection::send(vector<unsigned char>& data)
 {
     Header header(++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
-    Message message(header, data.data(), data.size());
+    Message message(header, data);
 
     _socket->send(message.bytes());
 }

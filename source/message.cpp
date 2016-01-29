@@ -1,25 +1,18 @@
 #include "message.h"
 
 Message::Message(Header header,
-                 const unsigned char* data,
-                 size_t size)
+                 const vector<unsigned char>& data)
 {
-    _bytes.resize(sizeof(Header) + size);
+    _bytes.resize(sizeof(Header) + data.size());
 
     *reinterpret_cast<Header*>(&_bytes.front()) = header;
-    for(size_t i = 0; i < size; ++i)
+    for (size_t i = 0; i < data.size(); ++i)
         _bytes[sizeof(Header) + i] = data[i];
 }
 
-Message::Message(size_t total_size)
-{
-    _bytes.resize(total_size);
-}
-
-Message::Message(vector<unsigned char>& buffer)
-{
-    _bytes = buffer;
-}
+Message::Message(vector<unsigned char>& bytes) :
+        _bytes(bytes)
+{ }
 
 Header Message::header() const
 {
