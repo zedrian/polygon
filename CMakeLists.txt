@@ -24,6 +24,7 @@ set(NETWORK_SOURCE
         source/header.cpp
         source/message.h
         source/message.cpp
+        source/message-type.h
         source/socket.h
         source/socket.cpp)
 
