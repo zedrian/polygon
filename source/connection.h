@@ -37,6 +37,10 @@ public:
 
 
 private:
+    void initialize();
+
+
+private:
     shared_ptr<Socket> _socket;
 
     thread _for_receive_waiter;

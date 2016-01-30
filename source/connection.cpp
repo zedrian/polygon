@@ -20,8 +20,7 @@ Connection::Connection(string address,
     if (!_socket->connected())
         throw runtime_error("Failed to establish connection to " + address + ":" + to_string(port) + ".");
 
-    mbedtls_timing_get_timer(&_clock, 1);
-    _last_sent_message_id = 0;
+    initialize();
 }
 
 Connection::Connection(shared_ptr<Socket> socket_from_acceptor) :
@@ -33,8 +32,7 @@ Connection::Connection(shared_ptr<Socket> socket_from_acceptor) :
     if (!_socket->connected())
         throw logic_error("Connection can not be initialized with closed socket.");
 
-    mbedtls_timing_get_timer(&_clock, 1);
-    _last_sent_message_id = 0;
+    initialize();
 }
 
 Connection::~Connection()
@@ -78,16 +76,16 @@ void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
     _when_receive_lambda = lambda;
 
     _for_receive_waiter = thread([&]()
-     {
-         vector<unsigned char> data;
+    {
+        vector<unsigned char> data;
 
-         while (_socket->connected())
-         {
-             data = receive(10);
-             if (!data.empty())
-                 _when_receive_lambda(data);
-         }
-     });
+        while (_socket->connected())
+        {
+            data = receive(10);
+            if (!data.empty())
+                _when_receive_lambda(data);
+        }
+    });
     _for_receive_waiter.detach();
 }
 
@@ -100,4 +98,10 @@ void Connection::generateRandom(unsigned char* buffer,
 size_t Connection::maximumMessageSize() const
 {
     return _socket->maximumFragmentSize() - sizeof(Header);
+}
+
+void Connection::initialize()
+{
+    mbedtls_timing_get_timer(&_clock, 1);
+    _last_sent_message_id = 0;
 }
