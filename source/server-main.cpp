@@ -55,18 +55,18 @@ void work()
 
     vector<unsigned char> sending_data(3, 0x00);
     connection.setWhenReceiveLambda([&](vector<unsigned char> client_input)
-                                    {
-                                        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
-                                        showArray(client_input);
+    {
+        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
+        showArray(client_input);
 
-                                        processClientInput(client_input, sending_data);
+        processClientInput(client_input, sending_data);
 
-                                        cout << "Sending to client: ";
-                                        connection.send(sending_data);
-                                        cout << "success" << endl;
-                                        cout << "Sent to client:" << endl;
-                                        showArray(sending_data);
-                                    });
+        cout << "Sending to client: ";
+        connection.send(sending_data);
+        cout << "success" << endl;
+        cout << "Sent to client:" << endl;
+        showArray(sending_data);
+    });
 
     while(connection.connected());
     cout << "Connection closed. Exiting." << endl;
