@@ -1,6 +1,6 @@
 #include <stdexcept>
+#include <condition_variable>
 
-#include "message.h"
 #include "connection.h"
 
 
@@ -9,6 +9,8 @@ using std::logic_error;
 using std::to_string;
 using std::runtime_error;
 using std::this_thread::sleep_for;
+using std::unique_lock;
+using std::condition_variable;
 
 
 Connection::Connection(string address,
@@ -60,33 +62,22 @@ void Connection::send(vector<unsigned char>& data)
 
 vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 {
-    vector<unsigned char> buffer(_socket->maximumFragmentSize(), 0x00);
+    unique_lock<mutex> lock(_messages_mutex);
+    condition_variable messages_not_empty_condition;
+    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [&]{return !_messages.empty();});
 
-    if(_socket->receive(buffer, timeout_in_milliseconds) == 0)
+    if(_messages.empty())
         return vector<unsigned char>();
 
-    Message message(buffer);
-    _last_received_message_id = message.header().id();
+    auto data = _messages.front().data();
+    _messages.pop();
 
-    return message.data();
+    return data;
 }
 
 void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
 {
     _when_receive_lambda = lambda;
-
-    _for_receive_waiter = thread([&]()
-    {
-        vector<unsigned char> data;
-
-        while (_socket->connected())
-        {
-            data = receive(10);
-            if (!data.empty())
-                _when_receive_lambda(data);
-        }
-    });
-    _for_receive_waiter.detach();
 }
 
 void Connection::generateRandom(unsigned char* buffer,
@@ -104,4 +95,25 @@ void Connection::initialize()
 {
     mbedtls_timing_get_timer(&_clock, 1);
     _last_sent_message_id = 0;
+
+    _receiver = thread([&]
+    {
+        vector<unsigned char> buffer;
+
+        while(connected())
+        {
+            buffer.resize(maximumMessageSize(), 0x00);
+            if(_socket->receive(buffer) == 0)
+                continue;
+
+            if(_when_receive_lambda)
+                _when_receive_lambda(Message(buffer).data());
+            else
+            {
+                unique_lock<mutex> lock(_messages_mutex);
+                _messages.push(Message(buffer));
+            }
+        }
+    });
+    _receiver.detach();
 }

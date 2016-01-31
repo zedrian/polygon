@@ -3,12 +3,17 @@
 
 #include <memory>
 #include <thread>
+#include <queue>
+#include <mutex>
 
+#include "message.h"
 #include "socket.h"
 
 
 using std::shared_ptr;
 using std::thread;
+using std::queue;
+using std::mutex;
 
 
 class Connection
@@ -43,8 +48,11 @@ private:
 private:
     shared_ptr<Socket> _socket;
 
-    thread _for_receive_waiter;
+    thread _receiver;
     WhenReceiveLambda _when_receive_lambda;
+
+    queue<Message> _messages;
+    mutex _messages_mutex;
 
     size_t _last_sent_message_id;
     size_t _last_received_message_id;
