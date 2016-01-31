@@ -54,10 +54,7 @@ void Connection::close()
 
 void Connection::send(vector<unsigned char>& data)
 {
-    Header header(MessageType::Normal, ++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
-    Message message(header, data);
-
-    _socket->send(message.bytes());
+    send(MessageType::Normal, data);
 }
 
 vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
@@ -116,4 +113,13 @@ void Connection::initialize()
         }
     });
     _receiver.detach();
+}
+
+void Connection::send(MessageType type,
+                      vector<unsigned char>& data)
+{
+    Header header(type, ++_last_sent_message_id, mbedtls_timing_get_timer(&_clock, 0));
+    Message message(header, data);
+
+    _socket->send(message.bytes());
 }

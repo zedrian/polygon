@@ -44,6 +44,9 @@ public:
 private:
     void initialize();
 
+    void send(MessageType type,
+              vector<unsigned char>& data);
+
 
 private:
     shared_ptr<Socket> _socket;
