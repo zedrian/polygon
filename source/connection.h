@@ -52,6 +52,7 @@ private:
 
 private:
     shared_ptr<Socket> _socket;
+    bool _connected;
 
     thread _receiver;
     WhenReceiveLambda _when_receive_lambda;
