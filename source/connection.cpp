@@ -62,8 +62,7 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 {
     unique_lock<mutex> lock(_messages_mutex);
     condition_variable messages_not_empty_condition;
-    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [&]
-    { return !_messages.empty(); });
+    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [this] { return !_messages.empty(); });
 
     if (_messages.empty())
         return vector<unsigned char>();
@@ -82,18 +81,21 @@ void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
 void Connection::configurePing(unsigned long ping_interval_in_milliseconds,
                                unsigned char maximum_ping_messages_loss)
 {
-    _pinger = thread([&]
+    _pinger = thread([this, ping_interval_in_milliseconds, maximum_ping_messages_loss]
     {
+        auto interval = ping_interval_in_milliseconds;
+        auto iterations_max = maximum_ping_messages_loss;
+
         unsigned char iteration_index = 0;
         vector<unsigned char> ping_data = {0x27, 0x18, 0x28};
 
         while (connected())
         {
-            sleep_for(std::chrono::milliseconds(ping_interval_in_milliseconds));
+            sleep_for(std::chrono::milliseconds(interval));
             send(MessageType::Ping, ping_data);
             std::cout << "Ping sent." << std::endl;
 
-            iteration_index = (iteration_index + 1) % maximum_ping_messages_loss;
+            iteration_index = (iteration_index + 1) % iterations_max;
             if (iteration_index == 0)
             {
                 unique_lock<mutex> lock(_ping_received_mutex);
@@ -122,7 +124,7 @@ void Connection::initialize()
     mbedtls_timing_get_timer(&_clock, 1);
     _last_sent_message_id = 0;
 
-    _receiver = thread([&]
+    _receiver = thread([this]
     {
         vector<unsigned char> buffer;
         unique_lock<mutex> ping_received_lock(_ping_received_mutex);
