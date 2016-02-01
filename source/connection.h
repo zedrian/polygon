@@ -35,6 +35,8 @@ public:
     vector<unsigned char> receive(unsigned long timeout_in_milliseconds = 0);
 
     void setWhenReceiveLambda(WhenReceiveLambda lambda);
+    void configurePing(unsigned long ping_interval_in_milliseconds,
+                       unsigned char maximum_ping_messages_loss);
 
     void generateRandom(unsigned char* buffer,
                         size_t size);
@@ -53,6 +55,10 @@ private:
 
     thread _receiver;
     WhenReceiveLambda _when_receive_lambda;
+
+    thread _pinger;
+    bool _ping_received;
+    mutex _ping_received_mutex;
 
     queue<Message> _messages;
     mutex _messages_mutex;

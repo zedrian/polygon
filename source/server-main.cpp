@@ -50,6 +50,7 @@ void work()
 
     cout << "Waiting for remote connection: ";
     Connection connection(acceptor.accept());
+    connection.configurePing(1000, 3);
     cout << "success" << endl;
     cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 

@@ -1,5 +1,6 @@
 #include <stdexcept>
 #include <condition_variable>
+#include <iostream>
 
 #include "connection.h"
 
@@ -61,9 +62,10 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 {
     unique_lock<mutex> lock(_messages_mutex);
     condition_variable messages_not_empty_condition;
-    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [&]{return !_messages.empty();});
+    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [&]
+    { return !_messages.empty(); });
 
-    if(_messages.empty())
+    if (_messages.empty())
         return vector<unsigned char>();
 
     auto data = _messages.front().data();
@@ -75,6 +77,33 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
 {
     _when_receive_lambda = lambda;
+}
+
+void Connection::configurePing(unsigned long ping_interval_in_milliseconds,
+                               unsigned char maximum_ping_messages_loss)
+{
+    _pinger = thread([&]
+    {
+        unsigned char iteration_index = 0;
+        vector<unsigned char> ping_data = {0x27, 0x18, 0x28};
+
+        while (connected())
+        {
+            sleep_for(std::chrono::milliseconds(ping_interval_in_milliseconds));
+            send(MessageType::Ping, ping_data);
+            std::cout << "Ping sent." << std::endl;
+
+            iteration_index = (iteration_index + 1) % maximum_ping_messages_loss;
+            if (iteration_index == 0)
+            {
+                unique_lock<mutex> lock(_ping_received_mutex);
+                if (!_ping_received)
+                    throw runtime_error("Connection timeout.");
+                else
+                    _ping_received = false;
+            }
+        }
+    });
 }
 
 void Connection::generateRandom(unsigned char* buffer,
@@ -96,19 +125,37 @@ void Connection::initialize()
     _receiver = thread([&]
     {
         vector<unsigned char> buffer;
+        unique_lock<mutex> ping_received_lock(_ping_received_mutex);
+        ping_received_lock.unlock();
 
-        while(connected())
+        while (connected())
         {
             buffer.resize(maximumMessageSize(), 0x00);
-            if(_socket->receive(buffer) == 0)
+            if (_socket->receive(buffer) == 0)
                 continue;
 
-            if(_when_receive_lambda)
-                _when_receive_lambda(Message(buffer).data());
-            else
+            Message message_received(buffer);
+            switch(message_received.header().type())
             {
-                unique_lock<mutex> lock(_messages_mutex);
-                _messages.push(Message(buffer));
+                case MessageType::Normal:
+                    if (_when_receive_lambda)
+                        _when_receive_lambda(Message(buffer).data());
+                    else
+                    {
+                        unique_lock<mutex> lock(_messages_mutex);
+                        _messages.push(Message(buffer));
+                    }
+                    break;
+
+                case MessageType::Ping:
+                    ping_received_lock.lock();
+                    _ping_received = true;
+                    std::cout << std::endl << "Ping: " << mbedtls_timing_get_timer(&_clock, 0) - message_received.header().construction_time() << std::endl;
+                    ping_received_lock.unlock();
+                    break;
+
+                default:
+                    throw logic_error("Message of unknown type received.");
             }
         }
     });
