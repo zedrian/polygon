@@ -15,6 +15,7 @@ using std::unique_lock;
 using std::condition_variable;
 using std::cout;
 using std::endl;
+using std::chrono::milliseconds;
 
 
 Connection::Connection(string address,
@@ -75,7 +76,7 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
 {
     unique_lock<mutex> lock(_messages_mutex);
     condition_variable messages_not_empty_condition;
-    messages_not_empty_condition.wait_for(lock, std::chrono::milliseconds(timeout_in_milliseconds), [this] { return !_messages.empty(); });
+    messages_not_empty_condition.wait_for(lock, milliseconds(timeout_in_milliseconds), [this] { return !_messages.empty(); });
 
     if (_messages.empty())
         return vector<unsigned char>();
@@ -106,7 +107,7 @@ void Connection::configurePing(unsigned long ping_interval_in_milliseconds,
 
             while (connected())
             {
-                sleep_for(std::chrono::milliseconds(interval));
+                sleep_for(milliseconds(interval));
                 send(MessageType::Ping, ping_data);
 
                 iteration_index = (iteration_index + 1) % iterations_max;
