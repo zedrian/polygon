@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <string>
 #include <vector>
+#include <mutex>
 
 #include <mbedtls/net.h>
 #include <mbedtls/entropy.h>
@@ -17,6 +18,7 @@
 using std::size_t;
 using std::string;
 using std::vector;
+using std::mutex;
 
 
 class Socket
@@ -46,13 +48,14 @@ public:
 private:
     mbedtls_net_context _net_context;
     mbedtls_ssl_context _ssl_context;
-    bool _constructed_by_acceptor;
+    mutable mutex _ssl_context_mutex;
 
+    bool _constructed_by_acceptor;
     mbedtls_x509_crt _certificate;
     mbedtls_ssl_config _ssl_configuration;
     mbedtls_entropy_context _entropy_context;
     mbedtls_ctr_drbg_context _ctr_drbg_context;
-    mbedtls_timing_delay_context _delay_context;
 
+    mbedtls_timing_delay_context _delay_context;
     bool _connected;
 };

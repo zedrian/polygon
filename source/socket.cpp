@@ -9,6 +9,7 @@
 using std::runtime_error;
 using std::logic_error;
 using std::exception;
+using std::lock_guard;
 
 
 Socket::Socket()
@@ -74,6 +75,8 @@ Socket::~Socket()
 void Socket::connect(const string address,
                      unsigned short port)
 {
+    lock_guard<mutex> lock(_ssl_context_mutex);
+
     if (_connected)
         throw logic_error("Can't connect socket that is already connected.");
 
@@ -127,6 +130,8 @@ void Socket::connect(const string address,
 
 void Socket::close()
 {
+    lock_guard<mutex> lock(_ssl_context_mutex);
+
     if (!_connected)
         return;
 
@@ -145,6 +150,8 @@ bool Socket::connected() const
 
 size_t Socket::send(const vector<unsigned char>& data)
 {
+    lock_guard<mutex> lock(_ssl_context_mutex);
+
     if (!_connected)
         throw logic_error("Can't send data via closed socket.");
 
@@ -168,6 +175,8 @@ size_t Socket::send(const vector<unsigned char>& data)
 size_t Socket::receive(vector<unsigned char>& buffer,
                        unsigned long timeout_in_milliseconds)
 {
+    lock_guard<mutex> lock(_ssl_context_mutex);
+
     if (!_connected)
         throw logic_error("Can't receive data from closed socket.");
 
@@ -202,6 +211,7 @@ size_t Socket::receive(vector<unsigned char>& buffer,
 
 size_t Socket::maximumFragmentSize() const
 {
+    lock_guard<mutex> lock(_ssl_context_mutex);
     return mbedtls_ssl_get_max_frag_len(&_ssl_context);;
 }
 
