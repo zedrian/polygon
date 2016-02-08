@@ -17,8 +17,10 @@ public:
             const vector<unsigned char>& data);
     Message(vector<unsigned char>& bytes);
 
+    bool operator<(const Message& other) const;
+
     Header header() const;
-    vector<unsigned char> data();
+    vector<unsigned char> data() const;
     vector<unsigned char>& bytes();
 
 

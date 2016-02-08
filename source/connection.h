@@ -12,7 +12,7 @@
 
 using std::shared_ptr;
 using std::thread;
-using std::queue;
+using std::priority_queue;
 using std::mutex;
 
 
@@ -61,7 +61,7 @@ private:
     bool _active;
     mutex _active_mutex;
 
-    queue<Message> _messages;
+    priority_queue<Message> _messages;
     mutex _messages_mutex;
 
     size_t _last_sent_message_id;

@@ -81,7 +81,7 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
     if (_messages.empty())
         return vector<unsigned char>();
 
-    auto data = _messages.front().data();
+    auto data = _messages.top().data();
     _messages.pop();
 
     return data;

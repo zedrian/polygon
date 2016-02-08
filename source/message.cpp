@@ -14,12 +14,18 @@ Message::Message(vector<unsigned char>& bytes) :
         _bytes(bytes)
 { }
 
+
+bool Message::operator<(const Message& other) const
+{
+    return header().id() > other.header().id();
+}
+
 Header Message::header() const
 {
     return *reinterpret_cast<const Header*>(&_bytes[0]);
 }
 
-vector<unsigned char> Message::data()
+vector<unsigned char> Message::data() const
 {
     return vector<unsigned char>(_bytes.end() - _bytes.size() + sizeof(Header), _bytes.end());
 }
