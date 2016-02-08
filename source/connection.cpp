@@ -113,11 +113,11 @@ void Connection::configurePing(unsigned long ping_interval_in_milliseconds,
                 iteration_index = (iteration_index + 1) % iterations_max;
                 if (iteration_index == 0)
                 {
-                    unique_lock<mutex> lock(_ping_received_mutex);
-                    if (!_ping_received)
+                    unique_lock<mutex> lock(_active_mutex);
+                    if (!_active)
                         throw runtime_error("Connection timeout.");
                     else
-                        _ping_received = false;
+                        _active = false;
                 }
             }
         }
@@ -158,14 +158,18 @@ void Connection::initialize()
         try
         {
             vector<unsigned char> buffer;
-            unique_lock<mutex> ping_received_lock(_ping_received_mutex);
-            ping_received_lock.unlock();
+            unique_lock<mutex> active_lock(_active_mutex);
+            active_lock.unlock();
 
             while (connected())
             {
                 buffer.resize(maximumMessageSize(), 0x00);
                 if (_socket->receive(buffer, 10) == 0)
                     continue;
+
+                active_lock.lock();
+                _active = true;
+                active_lock.unlock();
 
                 Message message_received(buffer);
                 switch (message_received.header().type())
@@ -181,9 +185,7 @@ void Connection::initialize()
                         break;
 
                     case MessageType::Ping:
-                        ping_received_lock.lock();
-                        _ping_received = true;
-                        ping_received_lock.unlock();
+                        // TODO: send Pong as answer
                         break;
 
                     default:

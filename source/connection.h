@@ -58,8 +58,8 @@ private:
     WhenReceiveLambda _when_receive_lambda;
 
     thread _pinger;
-    bool _ping_received;
-    mutex _ping_received_mutex;
+    bool _active;
+    mutex _active_mutex;
 
     queue<Message> _messages;
     mutex _messages_mutex;
