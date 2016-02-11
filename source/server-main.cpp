@@ -17,23 +17,10 @@ using std::shared_ptr;
 using std::make_shared;
 
 
-void processClientInput(vector<unsigned char>& input,
-                        vector<unsigned char>& result)
+void processClientInput(unsigned short& input,
+                        unsigned short& world_state)
 {
-    unsigned char minimum = input[0], maximum = input[0], sum = 0;
-
-    for (auto& x : input)
-    {
-        if (x < minimum)
-            minimum = x;
-        if (x > maximum)
-            maximum = x;
-        sum += x;
-    }
-
-    result[0] = minimum;
-    result[1] = maximum;
-    result[2] = sum;
+    world_state += input;
 }
 
 void work()
@@ -54,23 +41,34 @@ void work()
     cout << "success" << endl;
     cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 
-    vector<unsigned char> sending_data(3, 0x00);
-    connection.setWhenReceiveLambda([&](vector<unsigned char> client_input)
+    vector<unsigned char> client_input_serialized;
+    vector<unsigned char> world_state_serialized(2, 0x00);
+    unsigned short client_input;
+    unsigned short world_state = 0;
+    while(connection.connected())
     {
-        cout << "Received from client (" << dec << client_input.size() << " bytes):" << endl;
-        showArray(client_input);
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        cout << "Waking up." << endl;
+        unsigned short inputs_number = 0;
+        do
+        {
+            client_input_serialized = connection.receive(0);
+            if(client_input_serialized.empty())
+                break;
+            client_input = *reinterpret_cast<unsigned short*>(client_input_serialized.data());
+            processClientInput(client_input, world_state);
+            inputs_number++;
+        }
+        while(!client_input_serialized.empty());
 
-        processClientInput(client_input, sending_data);
-
+        cout << "World state: " << dec << world_state << " (" << inputs_number << " inputs processed)" << endl;
         cout << "Sending to client: ";
-        connection.send(sending_data);
+        *reinterpret_cast<unsigned short*>(world_state_serialized.data()) = world_state;
+        connection.send(world_state_serialized);
         cout << "success" << endl;
-        cout << "Sent to client:" << endl;
-        showArray(sending_data);
-    });
+    }
 
-    while(connection.connected());
-    cout << "Connection closed. Exiting." << endl;
+    cout << "Exiting." << endl;
 }
 
 

@@ -18,94 +18,45 @@ using std::exception;
 using std::make_shared;
 
 
-unsigned short chooseMenuAction()
-{
-    cout << "Choose an action:" << endl;
-    cout << "1. Connect to server" << endl;
-    cout << "2. Generate new data" << endl;
-    cout << "3. Send data to server" << endl;
-    cout << "4. Receive data from server" << endl;
-    cout << "0. Exit" << endl;
-    cout << endl;
-    cout << "Your choice: ";
-
-    unsigned short choice;
-    cin >> choice;
-    return choice;
-}
-
 void work()
 {
     shared_ptr<Connection> connection;
     string address;
     unsigned int port;
-    vector<unsigned char> data;
-    vector<unsigned char> server_data;
-    unsigned char data_size;
+    vector<unsigned char> input(2, 0x00);
+    vector<unsigned char> world_state(2, 0x00);
 
-    unsigned short action = 1;
-    while (action != 0)
     {
-        action = chooseMenuAction();
+        cout << "Enter server IP: ";
+        cin >> address;
+        cout << "Enter server port: ";
+        cin >> port;
 
-        switch (action)
+        cout << "Connecting to server: ";
+        connection = make_shared<Connection>(address, port);
+        connection->configurePing(1000, 3);
+        connection->setWhenReceiveLambda([](vector<unsigned char> world_state)
         {
-            case 1:
-                cout << "Enter server IP: ";
-                cin >> address;
-                cout << "Enter server port: ";
-                cin >> port;
+           cout << endl << "World state received: " << *reinterpret_cast<unsigned short*>(world_state.data()) << endl;
+        });
+        cout << "success" << endl;
+        cout << "Maximum size of a fragment for current session: " << connection->maximumMessageSize() << endl;
 
-                cout << "Connecting to server: ";
-                connection = make_shared<Connection>(address, port);
-                connection->configurePing(1000, 3);
-                cout << "success" << endl;
-                cout << "Maximum size of a fragment for current session: " << connection->maximumMessageSize() << endl;
-                break;
+        while (connection->connected())
+        {
+            cout << "Generating user input: ";
+            connection->generateRandom(input.data(), 2);
+            input[1] = 0x00;
+            cout << dec << *reinterpret_cast<unsigned short*>(input.data()) << endl;
+            cout << "Sending input to server: ";
+            connection->send(input);
+            cout << "success" << endl;
 
-            case 2:
-                connection->generateRandom(&data_size, 1);
-                data.resize(data_size);
-                connection->generateRandom(data.data(), data_size);
-                cout << "Generated data (" << dec << data.size() << " bytes):" << endl;
-                showArray(data);
-                break;
-
-            case 3:
-                cout << "Sending data to server: ";
-                connection->send(data);
-                cout << "success" << endl;
-                break;
-
-            case 4:
-                cout << "Enter timeout in milliseconds (0 for waiting forever): ";
-                unsigned long timeout;
-                cin >> timeout;
-
-                cout << "Receiving data from server: ";
-                server_data = connection->receive(timeout);
-                if (server_data.size() != 0)
-                {
-                    cout << "success" << endl;
-                    cout << "Received from server (" << dec << server_data.size() << " bytes):" << endl;
-                    showArray(server_data);
-                    break;
-                }
-                if(connection->connected())
-                {
-                    cout << "timeout" << endl;
-                    break;
-                }
-
-            case 0:
-                cout << "Exiting." << endl;
-                break;
-
-            default:
-                cout << "Unrecognized action. Exiting." << endl;
-                break;
+            connection->generateRandom(input.data(), 1);
+            std::this_thread::sleep_for(std::chrono::milliseconds(input[0] % 40));
         }
     }
+    cout << "Exiting." << endl;
 }
 
 int main(int argc,
@@ -117,6 +68,6 @@ int main(int argc,
     }
     catch (exception& e)
     {
-        cout << "fail: " << e.what() << endl;
+        cout << "Fail: " << e.what() << endl;
     }
 }
