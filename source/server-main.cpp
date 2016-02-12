@@ -41,7 +41,6 @@ void work()
     cout << "success" << endl;
     cout << "Maximum size of a fragment for current session: " << connection.maximumMessageSize() << endl;
 
-    vector<unsigned char> client_input_serialized;
     vector<unsigned char> world_state_serialized(2, 0x00);
     unsigned short client_input;
     unsigned short world_state = 0;
@@ -49,19 +48,13 @@ void work()
     {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
         cout << "Waking up." << endl;
-        unsigned short inputs_number = 0;
-        do
+        auto all_inputs_serialized = connection.getAllReceived();
+        for (auto& input : all_inputs_serialized)
         {
-            client_input_serialized = connection.receive(0);
-            if(client_input_serialized.empty())
-                break;
-            client_input = *reinterpret_cast<unsigned short*>(client_input_serialized.data());
+            client_input = *reinterpret_cast<unsigned short*>(input.data());
             processClientInput(client_input, world_state);
-            inputs_number++;
         }
-        while(!client_input_serialized.empty());
-
-        cout << "World state: " << dec << world_state << " (" << inputs_number << " inputs processed)" << endl;
+        cout << "World state: " << dec << world_state << " (" << all_inputs_serialized.size() << " inputs processed)" << endl;
         cout << "Sending to client: ";
         *reinterpret_cast<unsigned short*>(world_state_serialized.data()) = world_state;
         connection.send(world_state_serialized);

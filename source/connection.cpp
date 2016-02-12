@@ -87,6 +87,20 @@ vector<unsigned char> Connection::receive(unsigned long timeout_in_milliseconds)
     return data;
 }
 
+vector<vector<unsigned char>> Connection::getAllReceived()
+{
+    unique_lock<mutex> lock(_messages_mutex);
+    vector<vector<unsigned char>> all_received(_messages.size());
+
+    for (auto& one : all_received)
+    {
+        one = _messages.top().data();
+        _messages.pop();
+    }
+
+    return all_received;
+}
+
 void Connection::setWhenReceiveLambda(Connection::WhenReceiveLambda lambda)
 {
     _when_receive_lambda = lambda;

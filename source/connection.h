@@ -33,6 +33,7 @@ public:
 
     void send(vector<unsigned char>& data);
     vector<unsigned char> receive(unsigned long timeout_in_milliseconds = 0);
+    vector<vector<unsigned char>> getAllReceived();
 
     void setWhenReceiveLambda(WhenReceiveLambda lambda);
     void configurePing(unsigned long ping_interval_in_milliseconds,
