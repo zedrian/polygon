@@ -7,8 +7,12 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_SOURCE_DIR}/lib)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14")
 
+find_package(SFML REQUIRED)
+include_directories(${SFML_INCLUDE_DIR})
+
 
 set(POLYGON_SOURCE
         source/main.cpp)
 
 add_executable(polygon ${POLYGON_SOURCE})
+target_link_libraries(polygon ${SFML_LIBRARIES})
