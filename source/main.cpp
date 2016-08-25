@@ -814,7 +814,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         HANDLE fileHandle = 0;
 
         // load our vertex shader:
-        fileHandle = CreateFile("vert.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        fileHandle = CreateFile("../data/shaders/vert.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (fileHandle == INVALID_HANDLE_VALUE)
         {
             OutputDebugStringA("Failed to open shader file.");
@@ -833,7 +833,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         checkVulkanResult(result, "Failed to create vertex shader module.");
 
         // load our fragment shader:
-        fileHandle = CreateFile("frag.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        fileHandle = CreateFile("../data/shaders/frag.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
         if (fileHandle == INVALID_HANDLE_VALUE)
         {
             OutputDebugStringA("Failed to open shader file.");
