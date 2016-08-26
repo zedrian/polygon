@@ -277,6 +277,7 @@ void submitCommandBufferToQueue(VkQueue queue,
                                 VkCommandBuffer buffer,
                                 VkFence submit_fence);
 
+VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height);
 VKAPI_ATTR VkBool32 VKAPI_CALL
 MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
                       size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
@@ -551,22 +552,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
         // create a depth image:
-        VkImageCreateInfo imageCreateInfo = {};
-        imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-        imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-        imageCreateInfo.format = VK_FORMAT_D16_UNORM;
-        imageCreateInfo.extent = {context.width, context.height, 1};
-        imageCreateInfo.mipLevels = 1;
-        imageCreateInfo.arrayLayers = 1;
-        imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-        imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-        imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-        imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        imageCreateInfo.queueFamilyIndexCount = 0;
-        imageCreateInfo.pQueueFamilyIndices = nullptr;
-        imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
-        VkResult result = vkCreateImage(context.device, &imageCreateInfo, nullptr, &context.depthImage);
-        checkVulkanResult(result, "Failed to create depth image.");
+
+        context.depthImage = createDepthImage(context.device, context.width, context.height);
 
         VkMemoryRequirements memoryRequirements = {};
         vkGetImageMemoryRequirements(context.device, context.depthImage, &memoryRequirements);
@@ -599,6 +586,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         VkDeviceMemory imageMemory = {};
+        VkResult result;
         result = vkAllocateMemory(context.device, &imageAllocateInfo, NULL, &imageMemory);
         checkVulkanResult(result, "Failed to allocate device memory.");
 
@@ -1050,6 +1038,30 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height)
+{
+    VkImageCreateInfo imageCreateInfo = {};
+    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
+    imageCreateInfo.format = VK_FORMAT_D16_UNORM;
+    imageCreateInfo.extent = {width, height, 1};
+    imageCreateInfo.mipLevels = 1;
+    imageCreateInfo.arrayLayers = 1;
+    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
+    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
+    imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    imageCreateInfo.queueFamilyIndexCount = 0;
+    imageCreateInfo.pQueueFamilyIndices = nullptr;
+    imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImage image;
+    VkResult result = vkCreateImage(device, &imageCreateInfo, nullptr, &image);
+    checkVulkanResult(result, "Failed to create depth image.");
+
+    return image;
 }
 
 void submitCommandBufferToQueue(VkQueue queue,
