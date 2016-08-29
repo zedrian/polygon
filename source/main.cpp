@@ -280,6 +280,8 @@ void submitCommandBufferToQueue(VkQueue queue,
 VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format);
 tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image);
 
+void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset);
+VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format);
 VKAPI_ATTR VkBool32 VKAPI_CALL
 MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
                       size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
@@ -552,14 +554,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // create a depth image:
         VkFormat format = VK_FORMAT_D16_UNORM;
-        context.depthImage = createDepthImage(context.device, context.width, context.height, format);
-        VkDeviceMemory imageMemory;
-        uint32_t memoryTypeBits;
-        tie(imageMemory, memoryTypeBits) = allocateDeviceMemoryForImage(context.device, context.depthImage);
+        VkDeviceMemory image_memory;
+        uint32_t memory_type_bits;
 
-        VkResult result;
-        result = vkBindImageMemory(context.device, context.depthImage, imageMemory, 0);
-        checkVulkanResult(result, "Failed to bind image memory.");
+        context.depthImage = createDepthImage(context.device, context.width, context.height, format);
+        tie(image_memory, memory_type_bits) = allocateDeviceMemoryForImage(context.device, context.depthImage);
+        bindImageMemory(context.device, context.depthImage, image_memory, 0);
 
         // before using this depth buffer we must change it's layout:
         {
@@ -602,7 +602,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             submitInfo.pCommandBuffers = &context.setupCmdBuffer;
             submitInfo.signalSemaphoreCount = 0;
             submitInfo.pSignalSemaphores = NULL;
-            result = vkQueueSubmit(context.presentQueue, 1, &submitInfo, submitFence);
+            auto result = vkQueueSubmit(context.presentQueue, 1, &submitInfo, submitFence);
 
             vkWaitForFences(context.device, 1, &submitFence, VK_TRUE, UINT64_MAX);
             vkResetFences(context.device, 1, &submitFence);
@@ -610,22 +610,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         // create the depth image view:
-        VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-        VkImageViewCreateInfo imageViewCreateInfo = {};
-        imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-        imageViewCreateInfo.image = context.depthImage;
-        imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewCreateInfo.format = format;
-        imageViewCreateInfo.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-                                          VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
-        imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
-        imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-        imageViewCreateInfo.subresourceRange.levelCount = 1;
-        imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-        imageViewCreateInfo.subresourceRange.layerCount = 1;
-        result = vkCreateImageView(context.device, &imageViewCreateInfo, NULL, &context.depthImageView);
-        checkVulkanResult(result, "Failed to create image view.");
-
+        context.depthImageView = createDepthImageView(context.device, context.depthImage, format);
 
         // TUTORIAL_012 - Framebuffers
         // define our attachment points
@@ -738,7 +723,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
                     break;
                 }
             }
-            memoryTypeBits = memoryTypeBits >> 1;
+            memory_type_bits = memory_type_bits >> 1;
         }
 
         VkDeviceMemory vertexBufferMemory;
@@ -1008,6 +993,36 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format)
+{
+    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    VkImageViewCreateInfo imageViewCreateInfo = {};
+    imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    imageViewCreateInfo.image = image;
+    imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    imageViewCreateInfo.format = format;
+    imageViewCreateInfo.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+                                      VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+    imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
+    imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
+    imageViewCreateInfo.subresourceRange.levelCount = 1;
+    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
+    imageViewCreateInfo.subresourceRange.layerCount = 1;
+
+    VkImageView view;
+
+    auto result = vkCreateImageView(context.device, &imageViewCreateInfo, nullptr, &view);
+    checkVulkanResult(result, "Failed to create image view.");
+
+    return view;
+}
+
+void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset)
+{
+    VkResult result = vkBindImageMemory(device, image, memory, offset);
+    checkVulkanResult(result, "Failed to bind image memory.");
 }
 
 tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image)
