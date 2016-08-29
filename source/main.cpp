@@ -277,7 +277,7 @@ void submitCommandBufferToQueue(VkQueue queue,
                                 VkCommandBuffer buffer,
                                 VkFence submit_fence);
 
-VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height);
+VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format);
 VKAPI_ATTR VkBool32 VKAPI_CALL
 MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
                       size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
@@ -416,16 +416,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_CLOSE:
-            PostQuitMessage(0);
+        case WM_CLOSE:PostQuitMessage(0);
             break;
 
-        case WM_PAINT:
-            render();
+        case WM_PAINT:render();
             break;
 
-        default:
-            break;
+        default:break;
     }
 
     // a pass-through for now. We will return to this callback
@@ -552,8 +549,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
         // create a depth image:
-
-        context.depthImage = createDepthImage(context.device, context.width, context.height);
+        VkFormat format = VK_FORMAT_D16_UNORM;
+        context.depthImage = createDepthImage(context.device, context.width, context.height, format);
 
         VkMemoryRequirements memoryRequirements = {};
         vkGetImageMemoryRequirements(context.device, context.depthImage, &memoryRequirements);
@@ -647,7 +644,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
         imageViewCreateInfo.image = context.depthImage;
         imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-        imageViewCreateInfo.format = imageCreateInfo.format;
+        imageViewCreateInfo.format = format;
         imageViewCreateInfo.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
                                           VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
         imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
@@ -802,7 +799,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         HANDLE fileHandle = 0;
 
         // load our vertex shader:
-        fileHandle = CreateFile("../data/shaders/vert.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        fileHandle = CreateFile("../data/shaders/vert.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                NULL);
         if (fileHandle == INVALID_HANDLE_VALUE)
         {
             OutputDebugStringA("Failed to open shader file.");
@@ -821,7 +819,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         checkVulkanResult(result, "Failed to create vertex shader module.");
 
         // load our fragment shader:
-        fileHandle = CreateFile("../data/shaders/frag.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+        fileHandle = CreateFile("../data/shaders/frag.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                                NULL);
         if (fileHandle == INVALID_HANDLE_VALUE)
         {
             OutputDebugStringA("Failed to open shader file.");
@@ -1040,12 +1039,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 }
 
-VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height)
+VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format)
 {
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.format = VK_FORMAT_D16_UNORM;
+    imageCreateInfo.format = format;
     imageCreateInfo.extent = {width, height, 1};
     imageCreateInfo.mipLevels = 1;
     imageCreateInfo.arrayLayers = 1;
