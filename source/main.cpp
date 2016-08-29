@@ -278,6 +278,8 @@ void submitCommandBufferToQueue(VkQueue queue,
                                 VkFence submit_fence);
 
 VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format);
+tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image);
+
 VKAPI_ATTR VkBool32 VKAPI_CALL
 MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
                       size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
@@ -551,42 +553,11 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         // create a depth image:
         VkFormat format = VK_FORMAT_D16_UNORM;
         context.depthImage = createDepthImage(context.device, context.width, context.height, format);
+        VkDeviceMemory imageMemory;
+        uint32_t memoryTypeBits;
+        tie(imageMemory, memoryTypeBits) = allocateDeviceMemoryForImage(context.device, context.depthImage);
 
-        VkMemoryRequirements memoryRequirements = {};
-        vkGetImageMemoryRequirements(context.device, context.depthImage, &memoryRequirements);
-        cout << "Depth image memory requirements:" << endl;
-        cout << "   Size: " << memoryRequirements.size << endl;
-        cout << "   Alignment: " << memoryRequirements.alignment << endl;
-        cout << "   Memory type bits: " << memoryRequirements.memoryTypeBits << endl;
-
-        VkMemoryAllocateInfo imageAllocateInfo = {};
-        imageAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        imageAllocateInfo.allocationSize = memoryRequirements.size;
-
-        // memoryTypeBits is a bitfield where if bit i is set, it means that
-        // the VkMemoryType i of the VkPhysicalDeviceMemoryProperties structure
-        // satisfies the memory requirements:
-        uint32_t memoryTypeBits = memoryRequirements.memoryTypeBits;
-        VkMemoryPropertyFlags desiredMemoryFlags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
-        for (uint32_t i = 0; i < 32; ++i)
-        {
-            VkMemoryType memoryType = context.memoryProperties.memoryTypes[i];
-            if (memoryTypeBits & 1)
-            {
-                if ((memoryType.propertyFlags & desiredMemoryFlags) == desiredMemoryFlags)
-                {
-                    imageAllocateInfo.memoryTypeIndex = i;
-                    break;
-                }
-            }
-            memoryTypeBits = memoryTypeBits >> 1;
-        }
-
-        VkDeviceMemory imageMemory = {};
         VkResult result;
-        result = vkAllocateMemory(context.device, &imageAllocateInfo, NULL, &imageMemory);
-        checkVulkanResult(result, "Failed to allocate device memory.");
-
         result = vkBindImageMemory(context.device, context.depthImage, imageMemory, 0);
         checkVulkanResult(result, "Failed to bind image memory.");
 
@@ -1037,6 +1008,47 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image)
+{
+    VkMemoryRequirements requirements = {};
+    vkGetImageMemoryRequirements(device, image, &requirements);
+    cout << "Image memory requirements:" << endl;
+    cout << "   Size: " << requirements.size << endl;
+    cout << "   Alignment: " << requirements.alignment << endl;
+    cout << "   Memory type bits: " << requirements.memoryTypeBits << endl;
+
+    VkMemoryAllocateInfo memory_allocate_info = {};
+    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    memory_allocate_info.allocationSize = requirements.size;
+
+    // memory_type_bits is a bitfield where if bit i is set, it means that
+    // the VkMemoryType i of the VkPhysicalDeviceMemoryProperties structure
+    // satisfies the memory requirements:
+    uint32_t memory_type_bits = requirements.memoryTypeBits;
+    VkMemoryPropertyFlags desired_memory_flags = VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT;
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        VkMemoryType memory_type = context.memoryProperties.memoryTypes[i];
+        if (memory_type_bits & 1)
+        {
+            if ((memory_type.propertyFlags & desired_memory_flags) == desired_memory_flags)
+            {
+                memory_allocate_info.memoryTypeIndex = i;
+                break;
+            }
+        }
+        memory_type_bits = memory_type_bits >> 1;
+    }
+
+
+    VkDeviceMemory memory;
+
+    VkResult result = vkAllocateMemory(device, &memory_allocate_info, NULL, &memory);
+    checkVulkanResult(result, "Failed to allocate device memory.");
+
+    return tuple<VkDeviceMemory, uint32_t>(memory, memory_type_bits);
 }
 
 VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format)
