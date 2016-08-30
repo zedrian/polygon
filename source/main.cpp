@@ -282,6 +282,7 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, Vk
 
 void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset);
 VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format);
+VkRenderPass createRenderPass(VkDevice device, VkFormat color_format);
 VKAPI_ATTR VkBool32 VKAPI_CALL
 MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
                       size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
@@ -614,50 +615,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // TUTORIAL_012 - Framebuffers
         // define our attachment points
-        VkAttachmentDescription passAttachments[2] = {};
-        passAttachments[0].format = colorFormat;
-        passAttachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
-        passAttachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        passAttachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
-        passAttachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        passAttachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        passAttachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-        passAttachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        passAttachments[1].format = VK_FORMAT_D16_UNORM;
-        passAttachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
-        passAttachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
-        passAttachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        passAttachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
-        passAttachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
-        passAttachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-        passAttachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference colorAttachmentReference = {};
-        colorAttachmentReference.attachment = 0;
-        colorAttachmentReference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-
-        VkAttachmentReference depthAttachmentReference = {};
-        depthAttachmentReference.attachment = 1;
-        depthAttachmentReference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
-
-        // create the one main subpass of our renderpass:
-        VkSubpassDescription subpass = {};
-        subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
-        subpass.colorAttachmentCount = 1;
-        subpass.pColorAttachments = &colorAttachmentReference;
-        subpass.pDepthStencilAttachment = &depthAttachmentReference;
-
-        // create our main renderpass:
-        VkRenderPassCreateInfo renderPassCreateInfo = {};
-        renderPassCreateInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-        renderPassCreateInfo.attachmentCount = 2;
-        renderPassCreateInfo.pAttachments = passAttachments;
-        renderPassCreateInfo.subpassCount = 1;
-        renderPassCreateInfo.pSubpasses = &subpass;
-
-        result = vkCreateRenderPass(context.device, &renderPassCreateInfo, NULL, &context.renderPass);
-        checkVulkanResult(result, "Failed to create renderpass");
+        context.renderPass = createRenderPass(context.device, colorFormat);
 
 
         // create our frame buffers:
@@ -678,7 +636,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         for (uint32_t i = 0; i < context.presentImages.size(); ++i)
         {
             frameBufferAttachments[0] = presentImageViews[i];
-            result = vkCreateFramebuffer(context.device, &frameBufferCreateInfo, NULL, &context.frameBuffers[i]);
+            auto result = vkCreateFramebuffer(context.device, &frameBufferCreateInfo, NULL, &context.frameBuffers[i]);
             checkVulkanResult(result, "Failed to create framebuffer.");
         }
 
@@ -698,7 +656,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         vertexInputBufferInfo.queueFamilyIndexCount = 0;
         vertexInputBufferInfo.pQueueFamilyIndices = NULL;
 
-        result = vkCreateBuffer(context.device, &vertexInputBufferInfo, NULL, &context.vertexInputBuffer);
+        auto result = vkCreateBuffer(context.device, &vertexInputBufferInfo, NULL, &context.vertexInputBuffer);
         checkVulkanResult(result, "Failed to create vertex input buffer.");
 
         // allocate memory for buffers:
@@ -958,7 +916,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         pipelineCreateInfo.layout = context.pipelineLayout;
         pipelineCreateInfo.renderPass = context.renderPass;
         pipelineCreateInfo.subpass = 0;
-        pipelineCreateInfo.basePipelineHandle = NULL;
+        pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineCreateInfo.basePipelineIndex = 0;
 
         result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL,
@@ -995,25 +953,76 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     }
 }
 
+VkRenderPass createRenderPass(VkDevice device, VkFormat color_format)
+{
+    VkAttachmentDescription pass_attachments[2] = {};
+    pass_attachments[0].format = color_format;
+    pass_attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
+    pass_attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    pass_attachments[0].storeOp = VK_ATTACHMENT_STORE_OP_STORE;
+    pass_attachments[0].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    pass_attachments[0].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    pass_attachments[0].initialLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+    pass_attachments[0].finalLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    pass_attachments[1].format = VK_FORMAT_D16_UNORM;
+    pass_attachments[1].samples = VK_SAMPLE_COUNT_1_BIT;
+    pass_attachments[1].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    pass_attachments[1].storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    pass_attachments[1].stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    pass_attachments[1].stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    pass_attachments[1].initialLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+    pass_attachments[1].finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference color_attachment_reference = {};
+    color_attachment_reference.attachment = 0;
+    color_attachment_reference.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    VkAttachmentReference depth_attachment_reference = {};
+    depth_attachment_reference.attachment = 1;
+    depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+
+    // create the one main subpass of our renderpass:
+    VkSubpassDescription subpass = {};
+    subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
+    subpass.colorAttachmentCount = 1;
+    subpass.pColorAttachments = &color_attachment_reference;
+    subpass.pDepthStencilAttachment = &depth_attachment_reference;
+
+    // create our main renderpass:
+    VkRenderPassCreateInfo render_pass_create_info = {};
+    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    render_pass_create_info.attachmentCount = 2;
+    render_pass_create_info.pAttachments = pass_attachments;
+    render_pass_create_info.subpassCount = 1;
+    render_pass_create_info.pSubpasses = &subpass;
+
+    VkRenderPass render_pass;
+    auto result = vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass);
+    checkVulkanResult(result, "Failed to create renderpass");
+
+    return render_pass;
+}
+
 VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format)
 {
-    VkImageAspectFlags aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    VkImageViewCreateInfo imageViewCreateInfo = {};
-    imageViewCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    imageViewCreateInfo.image = image;
-    imageViewCreateInfo.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    imageViewCreateInfo.format = format;
-    imageViewCreateInfo.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
+    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    VkImageViewCreateInfo image_view_create_info = {};
+    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    image_view_create_info.image = image;
+    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    image_view_create_info.format = format;
+    image_view_create_info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
                                       VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
-    imageViewCreateInfo.subresourceRange.aspectMask = aspectMask;
-    imageViewCreateInfo.subresourceRange.baseMipLevel = 0;
-    imageViewCreateInfo.subresourceRange.levelCount = 1;
-    imageViewCreateInfo.subresourceRange.baseArrayLayer = 0;
-    imageViewCreateInfo.subresourceRange.layerCount = 1;
+    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
+    image_view_create_info.subresourceRange.baseMipLevel = 0;
+    image_view_create_info.subresourceRange.levelCount = 1;
+    image_view_create_info.subresourceRange.baseArrayLayer = 0;
+    image_view_create_info.subresourceRange.layerCount = 1;
 
     VkImageView view;
 
-    auto result = vkCreateImageView(context.device, &imageViewCreateInfo, nullptr, &view);
+    auto result = vkCreateImageView(device, &image_view_create_info, nullptr, &view);
     checkVulkanResult(result, "Failed to create image view.");
 
     return view;
