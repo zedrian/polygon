@@ -283,10 +283,21 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, Vk
 void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset);
 VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format);
 VkRenderPass createRenderPass(VkDevice device, VkFormat color_format);
-VKAPI_ATTR VkBool32 VKAPI_CALL
-MyDebugReportCallback(VkDebugReportFlagsEXT flags, VkDebugReportObjectTypeEXT objectType, uint64_t object,
-                      size_t location, int32_t messageCode, const char* pLayerPrefix, const char* pMessage,
-                      void* pUserData)
+VkFramebuffer createFramebuffer(VkDevice device,
+                                VkRenderPass pass,
+                                uint32_t width,
+                                uint32_t height,
+                                VkImageView color_image_view,
+                                VkImageView depth_image_view);
+
+VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
+                                                     VkDebugReportObjectTypeEXT objectType,
+                                                     uint64_t object,
+                                                     size_t location,
+                                                     int32_t messageCode,
+                                                     const char* pLayerPrefix,
+                                                     const char* pMessage,
+                                                     void* pUserData)
 {
 
     OutputDebugStringA(pLayerPrefix);
@@ -421,13 +432,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_CLOSE:PostQuitMessage(0);
+        case WM_CLOSE:
+            PostQuitMessage(0);
             break;
 
-        case WM_PAINT:render();
+        case WM_PAINT:
+            render();
             break;
 
-        default:break;
+        default:
+            break;
     }
 
     // a pass-through for now. We will return to this callback
@@ -617,29 +631,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         // define our attachment points
         context.renderPass = createRenderPass(context.device, colorFormat);
 
-
         // create our frame buffers:
-        VkImageView frameBufferAttachments[2];
-        frameBufferAttachments[1] = context.depthImageView;
-
-        VkFramebufferCreateInfo frameBufferCreateInfo = {};
-        frameBufferCreateInfo.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
-        frameBufferCreateInfo.renderPass = context.renderPass;
-        frameBufferCreateInfo.attachmentCount = 2;  // must be equal to the attachment count on render pass
-        frameBufferCreateInfo.pAttachments = frameBufferAttachments;
-        frameBufferCreateInfo.width = context.width;
-        frameBufferCreateInfo.height = context.height;
-        frameBufferCreateInfo.layers = 1;
-
-        // create a framebuffer per swap chain imageView:
         context.frameBuffers = new VkFramebuffer[context.presentImages.size()];
-        for (uint32_t i = 0; i < context.presentImages.size(); ++i)
-        {
-            frameBufferAttachments[0] = presentImageViews[i];
-            auto result = vkCreateFramebuffer(context.device, &frameBufferCreateInfo, NULL, &context.frameBuffers[i]);
-            checkVulkanResult(result, "Failed to create framebuffer.");
-        }
-
+        context.frameBuffers[0] = createFramebuffer(context.device, context.renderPass, context.width, context.height,
+                                                    presentImageViews[0], context.depthImageView);
+        context.frameBuffers[1] = createFramebuffer(context.device, context.renderPass, context.width, context.height,
+                                                    presentImageViews[1], context.depthImageView);
 
         // TUTORIAL_013 Vertex info
         struct vertex
@@ -932,8 +929,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             if (msg.message == WM_QUIT)
             {
                 done = true;
-            }
-            else
+            } else
             {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -951,6 +947,35 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkFramebuffer createFramebuffer(VkDevice device,
+                                VkRenderPass pass,
+                                uint32_t width,
+                                uint32_t height,
+                                VkImageView color_image_view,
+                                VkImageView depth_image_view)
+{
+    VkImageView attachments[2];
+    attachments[0] = color_image_view;
+    attachments[1] = depth_image_view;
+
+    VkFramebufferCreateInfo framebuffer_create_info = {};
+    framebuffer_create_info.sType = VK_STRUCTURE_TYPE_FRAMEBUFFER_CREATE_INFO;
+    framebuffer_create_info.renderPass = pass;
+    framebuffer_create_info.attachmentCount = 2;  // must be equal to the attachment count on render pass
+    framebuffer_create_info.pAttachments = attachments;
+    framebuffer_create_info.width = width;
+    framebuffer_create_info.height = height;
+    framebuffer_create_info.layers = 1;
+
+    VkFramebuffer buffer;
+
+    // create a framebuffer per swap chain imageView:
+    auto result = vkCreateFramebuffer(context.device, &framebuffer_create_info, NULL, &buffer);
+    checkVulkanResult(result, "Failed to create framebuffer.");
+
+    return buffer;
 }
 
 VkRenderPass createRenderPass(VkDevice device, VkFormat color_format)
@@ -1013,7 +1038,7 @@ VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format
     image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
     image_view_create_info.format = format;
     image_view_create_info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-                                      VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+                                         VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
     image_view_create_info.subresourceRange.aspectMask = aspect_mask;
     image_view_create_info.subresourceRange.baseMipLevel = 0;
     image_view_create_info.subresourceRange.levelCount = 1;
@@ -1209,8 +1234,7 @@ void checkSurfaceResolution(VkExtent2D& surface_resolution)
     {
         surface_resolution.width = context.width;
         surface_resolution.height = context.height;
-    }
-    else
+    } else
     {
         context.width = surface_resolution.width;
         context.height = surface_resolution.height;
@@ -1276,8 +1300,7 @@ tuple<VkFormat, VkColorSpaceKHR> getColorFormatAndSpace()
     if (surface_format_count == 1 && surface_formats[0].format == VK_FORMAT_UNDEFINED)
     {
         color_format = VK_FORMAT_B8G8R8_UNORM;
-    }
-    else
+    } else
     {
         color_format = surface_formats[0].format;
     }
