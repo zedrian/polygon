@@ -296,6 +296,8 @@ VkFramebuffer createFramebuffer(VkDevice device,
                                 VkImageView depth_image_view);
 
 VkBuffer createVertexInputBuffer(VkDevice device);
+VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device, VkBuffer buffer, uint32_t memory_type_bits);
+
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -648,39 +650,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         // create our vertex buffer:
         context.vertexInputBuffer = createVertexInputBuffer(context.device);
 
-
         // allocate memory for buffers:
-        VkMemoryRequirements vertexBufferMemoryRequirements = {};
-        vkGetBufferMemoryRequirements(context.device, context.vertexInputBuffer, &vertexBufferMemoryRequirements);
-
-        VkMemoryAllocateInfo bufferAllocateInfo = {};
-        bufferAllocateInfo.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-        bufferAllocateInfo.pNext = NULL;
-        bufferAllocateInfo.allocationSize = vertexBufferMemoryRequirements.size;
-
-        uint32_t vertexMemoryTypeBits = vertexBufferMemoryRequirements.memoryTypeBits;
-        VkMemoryPropertyFlags vertexDesiredMemoryFlags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
-        for (uint32_t i = 0; i < 32; ++i)
-        {
-            VkMemoryType memoryType = context.memoryProperties.memoryTypes[i];
-            if (vertexMemoryTypeBits & 1)
-            {
-                if ((memoryType.propertyFlags & vertexDesiredMemoryFlags) == vertexDesiredMemoryFlags)
-                {
-                    bufferAllocateInfo.memoryTypeIndex = i;
-                    break;
-                }
-            }
-            memory_type_bits = memory_type_bits >> 1;
-        }
-
-        VkDeviceMemory vertexBufferMemory;
-        auto result = vkAllocateMemory(context.device, &bufferAllocateInfo, NULL, &vertexBufferMemory);
-        checkVulkanResult(result, "Failed to allocate buffer memory.");
+        VkDeviceMemory vertexBufferMemory = allocateDeviceMemoryForBuffer(context.device, context.vertexInputBuffer, memory_type_bits);
 
         // set buffer content:
         void* mapped;
-        result = vkMapMemory(context.device, vertexBufferMemory, 0, VK_WHOLE_SIZE, 0, &mapped);
+        auto result = vkMapMemory(context.device, vertexBufferMemory, 0, VK_WHOLE_SIZE, 0, &mapped);
         checkVulkanResult(result, "Failed to mapp buffer memory.");
 
         vertex* triangle = (vertex*) mapped;
@@ -940,6 +915,39 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device, VkBuffer buffer, uint32_t memory_type_bits)
+{
+    VkMemoryRequirements requirements = {};
+    vkGetBufferMemoryRequirements(device, buffer, &requirements);
+
+    VkMemoryAllocateInfo allocate_info = {};
+    allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    allocate_info.pNext = nullptr;
+    allocate_info.allocationSize = requirements.size;
+
+    uint32_t vertex_memory_type_bits = requirements.memoryTypeBits;
+    VkMemoryPropertyFlags desired_memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
+    for (uint32_t i = 0; i < 32; ++i)
+    {
+        VkMemoryType memory_type = context.memoryProperties.memoryTypes[i];
+        if (vertex_memory_type_bits & 1)
+        {
+            if ((memory_type.propertyFlags & desired_memory_flags) == desired_memory_flags)
+            {
+                allocate_info.memoryTypeIndex = i;
+                break;
+            }
+        }
+        memory_type_bits = memory_type_bits >> 1;
+    }
+
+    VkDeviceMemory memory;
+    auto result = vkAllocateMemory(context.device, &allocate_info, nullptr, &memory);
+    checkVulkanResult(result, "Failed to allocate buffer memory.");
+
+    return memory;
 }
 
 VkBuffer createVertexInputBuffer(VkDevice device)
