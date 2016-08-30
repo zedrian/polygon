@@ -149,6 +149,11 @@ PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = NULL;
 PFN_vkQueuePresentKHR vkQueuePresentKHR = NULL;
 
 
+struct vertex
+{
+    float x, y, z, w;
+};
+
 void win32_LoadVulkan()
 {
 
@@ -290,6 +295,7 @@ VkFramebuffer createFramebuffer(VkDevice device,
                                 VkImageView color_image_view,
                                 VkImageView depth_image_view);
 
+VkBuffer createVertexInputBuffer(VkDevice device);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -638,23 +644,10 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         context.frameBuffers[1] = createFramebuffer(context.device, context.renderPass, context.width, context.height,
                                                     presentImageViews[1], context.depthImageView);
 
-        // TUTORIAL_013 Vertex info
-        struct vertex
-        {
-            float x, y, z, w;
-        };
 
         // create our vertex buffer:
-        VkBufferCreateInfo vertexInputBufferInfo = {};
-        vertexInputBufferInfo.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-        vertexInputBufferInfo.size = sizeof(vertex) * 3; // size in Bytes
-        vertexInputBufferInfo.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
-        vertexInputBufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-        vertexInputBufferInfo.queueFamilyIndexCount = 0;
-        vertexInputBufferInfo.pQueueFamilyIndices = NULL;
+        context.vertexInputBuffer = createVertexInputBuffer(context.device);
 
-        auto result = vkCreateBuffer(context.device, &vertexInputBufferInfo, NULL, &context.vertexInputBuffer);
-        checkVulkanResult(result, "Failed to create vertex input buffer.");
 
         // allocate memory for buffers:
         VkMemoryRequirements vertexBufferMemoryRequirements = {};
@@ -682,7 +675,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         }
 
         VkDeviceMemory vertexBufferMemory;
-        result = vkAllocateMemory(context.device, &bufferAllocateInfo, NULL, &vertexBufferMemory);
+        auto result = vkAllocateMemory(context.device, &bufferAllocateInfo, NULL, &vertexBufferMemory);
         checkVulkanResult(result, "Failed to allocate buffer memory.");
 
         // set buffer content:
@@ -947,6 +940,23 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkBuffer createVertexInputBuffer(VkDevice device)
+{
+    VkBufferCreateInfo vertex_buffer_create_info = {};
+    vertex_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+    vertex_buffer_create_info.size = sizeof(vertex) * 3;
+    vertex_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
+    vertex_buffer_create_info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    vertex_buffer_create_info.queueFamilyIndexCount = 0;
+    vertex_buffer_create_info.pQueueFamilyIndices = nullptr;
+
+    VkBuffer buffer;
+    auto result = vkCreateBuffer(device, &vertex_buffer_create_info, nullptr, &buffer);
+    checkVulkanResult(result, "Failed to create vertex input buffer.");
+
+    return buffer;
 }
 
 VkFramebuffer createFramebuffer(VkDevice device,
