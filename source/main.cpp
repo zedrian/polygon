@@ -315,8 +315,9 @@ VkPipelineLayout createPipelineLayout(VkDevice device);
 
 array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
                                                                        VkShaderModule fragment_shader);
-
 VkSemaphore createSemaphore(VkDevice device);
+
+uint32_t acquireNextImageIndex(VkDevice device, VkSwapchainKHR swapchain, VkSemaphore semaphore);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -336,12 +337,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags
 
 void render()
 {
-    VkSemaphore presentCompleteSemaphore = createSemaphore(context.device);
-    VkSemaphore renderingCompleteSemaphore = createSemaphore(context.device);
+    VkSemaphore present_complete_semaphore = createSemaphore(context.device);
+    VkSemaphore rendering_complete_semaphore = createSemaphore(context.device);
 
-    uint32_t nextImageIdx;
-    vkAcquireNextImageKHR(context.device, context.swapChain, UINT64_MAX, presentCompleteSemaphore, VK_NULL_HANDLE,
-                          &nextImageIdx);
+    uint32_t nextImageIdx = acquireNextImageIndex(context.device, context.swapChain, present_complete_semaphore);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -427,12 +426,12 @@ void render()
     VkSubmitInfo submitInfo = {};
     submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &presentCompleteSemaphore;
+    submitInfo.pWaitSemaphores = &present_complete_semaphore;
     submitInfo.pWaitDstStageMask = &waitStageMash;
     submitInfo.commandBufferCount = 1;
     submitInfo.pCommandBuffers = &context.drawCmdBuffer;
     submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &renderingCompleteSemaphore;
+    submitInfo.pSignalSemaphores = &rendering_complete_semaphore;
     vkQueueSubmit(context.presentQueue, 1, &submitInfo, renderFence);
 
     vkWaitForFences(context.device, 1, &renderFence, VK_TRUE, UINT64_MAX);
@@ -442,15 +441,25 @@ void render()
     presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     presentInfo.pNext = NULL;
     presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &renderingCompleteSemaphore;
+    presentInfo.pWaitSemaphores = &rendering_complete_semaphore;
     presentInfo.swapchainCount = 1;
     presentInfo.pSwapchains = &context.swapChain;
     presentInfo.pImageIndices = &nextImageIdx;
     presentInfo.pResults = NULL;
     vkQueuePresentKHR(context.presentQueue, &presentInfo);
 
-    vkDestroySemaphore(context.device, presentCompleteSemaphore, NULL);
-    vkDestroySemaphore(context.device, renderingCompleteSemaphore, NULL);
+    vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
+    vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+uint32_t acquireNextImageIndex(VkDevice device,
+                               VkSwapchainKHR swapchain,
+                               VkSemaphore semaphore)
+{
+    uint32_t index;
+    vkAcquireNextImageKHR(device, swapchain, UINT64_MAX, semaphore, VK_NULL_HANDLE, &index);
+
+    return index;
 }
 
 VkSemaphore createSemaphore(VkDevice device)
