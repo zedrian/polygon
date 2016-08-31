@@ -656,7 +656,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         context.vertexInputBuffer = createVertexInputBuffer(context.device);
 
         // allocate memory for buffers:
-        VkDeviceMemory vertexBufferMemory = allocateDeviceMemoryForBuffer(context.device, context.vertexInputBuffer, memory_type_bits);
+        VkDeviceMemory vertexBufferMemory = allocateDeviceMemoryForBuffer(context.device, context.vertexInputBuffer,
+                                                                          memory_type_bits);
 
         // set buffer content:
         void* mapped;
@@ -664,12 +665,9 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         checkVulkanResult(result, "Failed to map buffer memory.");
 
         vertex* triangle = (vertex*) mapped;
-        vertex v1 = {-1.0f, -1.0f, 0, 1.0f};
-        vertex v2 = {1.0f, -1.0f, 0, 1.0f};
-        vertex v3 = {0.0f, 1.0f, 0, 1.0f};
-        triangle[0] = v1;
-        triangle[1] = v2;
-        triangle[2] = v3;
+        triangle[0] = {-1.0f, -1.0f, 0, 1.0f};
+        triangle[1] = {1.0f, -1.0f, 0, 1.0f};
+        triangle[2] = {0.0f, 1.0f, 0, 1.0f};
 
         vkUnmapMemory(context.device, vertexBufferMemory);
 
@@ -726,12 +724,12 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // viewport config:
         VkViewport viewport = {};
-        viewport.x = 0;
-        viewport.y = 0;
+        viewport.x = 0.f;
+        viewport.y = 0.f;
         viewport.width = context.width;
         viewport.height = context.height;
-        viewport.minDepth = 0;
-        viewport.maxDepth = 1;
+        viewport.minDepth = 0.f;
+        viewport.maxDepth = 1.f;
 
         VkRect2D scissors = {};
         scissors.offset = {0, 0};
@@ -764,7 +762,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         multisampleState.rasterizationSamples = VK_SAMPLE_COUNT_1_BIT;
         multisampleState.sampleShadingEnable = VK_FALSE;
         multisampleState.minSampleShading = 0;
-        multisampleState.pSampleMask = NULL;
+        multisampleState.pSampleMask = nullptr;
         multisampleState.alphaToCoverageEnable = VK_FALSE;
         multisampleState.alphaToOneEnable = VK_FALSE;
 
@@ -826,20 +824,20 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         pipelineCreateInfo.pStages = shaderStageCreateInfo;
         pipelineCreateInfo.pVertexInputState = &vertexInputStateCreateInfo;
         pipelineCreateInfo.pInputAssemblyState = &inputAssemblyStateCreateInfo;
-        pipelineCreateInfo.pTessellationState = NULL;
-        pipelineCreateInfo.pViewportState = &viewportState;
-        pipelineCreateInfo.pRasterizationState = &rasterizationState;
-        pipelineCreateInfo.pMultisampleState = &multisampleState;
-        pipelineCreateInfo.pDepthStencilState = &depthState;
-        pipelineCreateInfo.pColorBlendState = &colorBlendState;
-        pipelineCreateInfo.pDynamicState = &dynamicStateCreateInfo;
+        pipelineCreateInfo.pTessellationState = nullptr;
+        pipelineCreateInfo.pViewportState = nullptr;
+        pipelineCreateInfo.pRasterizationState = nullptr;
+        pipelineCreateInfo.pMultisampleState = nullptr;
+        pipelineCreateInfo.pDepthStencilState = nullptr;
+        pipelineCreateInfo.pColorBlendState = nullptr;
+        pipelineCreateInfo.pDynamicState = nullptr;
         pipelineCreateInfo.layout = context.pipelineLayout;
         pipelineCreateInfo.renderPass = context.renderPass;
         pipelineCreateInfo.subpass = 0;
         pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineCreateInfo.basePipelineIndex = 0;
 
-        result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, NULL,
+        result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr,
                                            &context.pipeline);
         checkVulkanResult(result, "Failed to create graphics pipeline.");
 
@@ -897,7 +895,7 @@ VkShaderModule createShaderModule(VkDevice device,
 
     // load our vertex shader:
     file = CreateFile(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                            NULL);
+                      NULL);
     if (file == INVALID_HANDLE_VALUE)
     {
         OutputDebugStringA("Failed to open shader file.");
