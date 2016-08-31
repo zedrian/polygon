@@ -318,6 +318,7 @@ array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderM
 VkSemaphore createSemaphore(VkDevice device);
 
 uint32_t acquireNextImageIndex(VkDevice device, VkSwapchainKHR swapchain, VkSemaphore semaphore);
+void beginCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlagBits usage_bits);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -342,11 +343,8 @@ void render()
 
     uint32_t nextImageIdx = acquireNextImageIndex(context.device, context.swapChain, present_complete_semaphore);
 
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
+    beginCommandBuffer(context.drawCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
-    vkBeginCommandBuffer(context.drawCmdBuffer, &beginInfo);
 
     // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     VkImageMemoryBarrier layoutTransitionBarrier = {};
@@ -450,6 +448,16 @@ void render()
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+void beginCommandBuffer(VkCommandBuffer buffer,
+                        VkCommandBufferUsageFlagBits usage_bits)
+{
+    VkCommandBufferBeginInfo beginInfo = {};
+    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    beginInfo.flags = usage_bits;
+
+    vkBeginCommandBuffer(buffer, &beginInfo);
 }
 
 uint32_t acquireNextImageIndex(VkDevice device,
@@ -563,10 +571,6 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         presentImagesViewCreateInfo.subresourceRange.baseArrayLayer = 0;
         presentImagesViewCreateInfo.subresourceRange.layerCount = 1;
 
-        VkCommandBufferBeginInfo beginInfo = {};
-        beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-        beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
         VkFenceCreateInfo fenceCreateInfo = {};
         fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
         VkFence submitFence;
@@ -578,7 +582,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             presentImagesViewCreateInfo.image = context.presentImages[i];
 
             // start recording out image layout change barrier on our setup command buffer:
-            vkBeginCommandBuffer(context.setupCmdBuffer, &beginInfo);
+            beginCommandBuffer(context.setupCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
             VkImageMemoryBarrier layoutTransitionBarrier = {};
             layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
