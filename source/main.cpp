@@ -319,6 +319,7 @@ VkSemaphore createSemaphore(VkDevice device);
 
 uint32_t acquireNextImageIndex(VkDevice device, VkSwapchainKHR swapchain, VkSemaphore semaphore);
 void beginCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlagBits usage_bits);
+void queuePresent(VkQueue queue, VkSemaphore* semaphore, VkSwapchainKHR* swapchain, uint32_t* next_image_index);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -341,10 +342,9 @@ void render()
     VkSemaphore present_complete_semaphore = createSemaphore(context.device);
     VkSemaphore rendering_complete_semaphore = createSemaphore(context.device);
 
-    uint32_t nextImageIdx = acquireNextImageIndex(context.device, context.swapChain, present_complete_semaphore);
+    uint32_t next_image_index = acquireNextImageIndex(context.device, context.swapChain, present_complete_semaphore);
 
     beginCommandBuffer(context.drawCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
 
     // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     VkImageMemoryBarrier layoutTransitionBarrier = {};
@@ -355,7 +355,7 @@ void render()
     layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
     layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    layoutTransitionBarrier.image = context.presentImages[nextImageIdx];
+    layoutTransitionBarrier.image = context.presentImages[next_image_index];
     VkImageSubresourceRange resourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
     layoutTransitionBarrier.subresourceRange = resourceRange;
 
@@ -363,8 +363,8 @@ void render()
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                          0,
-                         0, NULL,
-                         0, NULL,
+                         0, nullptr,
+                         0, nullptr,
                          1, &layoutTransitionBarrier);
 
     // activate render pass:
@@ -374,7 +374,7 @@ void render()
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = context.renderPass;
-    renderPassBeginInfo.framebuffer = context.frameBuffers[nextImageIdx];
+    renderPassBeginInfo.framebuffer = context.frameBuffers[next_image_index];
     renderPassBeginInfo.renderArea = {0, 0, context.width, context.height};
     renderPassBeginInfo.clearValueCount = 2;
     renderPassBeginInfo.pClearValues = clearValue;
@@ -408,9 +408,14 @@ void render()
     prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
     prePresentBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    prePresentBarrier.image = context.presentImages[nextImageIdx];
-    vkCmdPipelineBarrier(context.drawCmdBuffer, VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT, 0, 0, NULL, 0, NULL, 1, &prePresentBarrier);
+    prePresentBarrier.image = context.presentImages[next_image_index];
+    vkCmdPipelineBarrier(context.drawCmdBuffer,
+                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
+                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &prePresentBarrier);
 
     vkEndCommandBuffer(context.drawCmdBuffer);
 
@@ -433,21 +438,30 @@ void render()
     vkQueueSubmit(context.presentQueue, 1, &submitInfo, renderFence);
 
     vkWaitForFences(context.device, 1, &renderFence, VK_TRUE, UINT64_MAX);
-    vkDestroyFence(context.device, renderFence, NULL);
+    vkDestroyFence(context.device, renderFence, nullptr);
 
-    VkPresentInfoKHR presentInfo = {};
-    presentInfo.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
-    presentInfo.pNext = NULL;
-    presentInfo.waitSemaphoreCount = 1;
-    presentInfo.pWaitSemaphores = &rendering_complete_semaphore;
-    presentInfo.swapchainCount = 1;
-    presentInfo.pSwapchains = &context.swapChain;
-    presentInfo.pImageIndices = &nextImageIdx;
-    presentInfo.pResults = NULL;
-    vkQueuePresentKHR(context.presentQueue, &presentInfo);
+    queuePresent(context.presentQueue, &rendering_complete_semaphore, &context.swapChain, &next_image_index);
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+void queuePresent(VkQueue queue,
+                  VkSemaphore* semaphore,
+                  VkSwapchainKHR* swapchain,
+                  uint32_t* next_image_index)
+{
+    VkPresentInfoKHR info = {};
+    info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
+    info.pNext = nullptr;
+    info.waitSemaphoreCount = 1;
+    info.pWaitSemaphores = semaphore;
+    info.swapchainCount = 1;
+    info.pSwapchains = swapchain;
+    info.pImageIndices = next_image_index;
+    info.pResults = nullptr;
+
+    checkVulkanResult(vkQueuePresentKHR(queue, &info), "Failed to queue present.");
 }
 
 void beginCommandBuffer(VkCommandBuffer buffer,
@@ -457,7 +471,7 @@ void beginCommandBuffer(VkCommandBuffer buffer,
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
     beginInfo.flags = usage_bits;
 
-    vkBeginCommandBuffer(buffer, &beginInfo);
+    checkVulkanResult(vkBeginCommandBuffer(buffer, &beginInfo), "Failed to begin command buffer.");
 }
 
 uint32_t acquireNextImageIndex(VkDevice device,
