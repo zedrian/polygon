@@ -14,6 +14,7 @@
 #include <vulkan/vulkan.h>
 
 
+using std::array;
 using std::cout;
 using std::endl;
 using std::exception;
@@ -302,6 +303,9 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
 VkShaderModule createShaderModule(VkDevice device,
                                   const char* file_name);
 VkPipelineLayout createPipelineLayout(VkDevice device);
+
+array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
+                                                                       VkShaderModule fragment_shader);
 
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
@@ -684,18 +688,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         context.pipelineLayout = createPipelineLayout(context.device);
 
         // setup shader stages:
-        VkPipelineShaderStageCreateInfo shaderStageCreateInfo[2] = {};
-        shaderStageCreateInfo[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderStageCreateInfo[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-        shaderStageCreateInfo[0].module = vertexShaderModule;
-        shaderStageCreateInfo[0].pName = "main";        // shader entry point function name
-        shaderStageCreateInfo[0].pSpecializationInfo = NULL;
-
-        shaderStageCreateInfo[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-        shaderStageCreateInfo[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-        shaderStageCreateInfo[1].module = fragmentShaderModule;
-        shaderStageCreateInfo[1].pName = "main";        // shader entry point function name
-        shaderStageCreateInfo[1].pSpecializationInfo = NULL;
+        auto shader_stage_create_info = prepareShaderStageCreateInfo(vertexShaderModule, fragmentShaderModule);
 
         // vertex input configuration:
         VkVertexInputBindingDescription vertexBindingDescription = {};
@@ -821,7 +814,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         VkGraphicsPipelineCreateInfo pipelineCreateInfo = {};
         pipelineCreateInfo.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO;
         pipelineCreateInfo.stageCount = 2;
-        pipelineCreateInfo.pStages = shaderStageCreateInfo;
+        pipelineCreateInfo.pStages = shader_stage_create_info.data();
         pipelineCreateInfo.pVertexInputState = &vertexInputStateCreateInfo;
         pipelineCreateInfo.pInputAssemblyState = &inputAssemblyStateCreateInfo;
         pipelineCreateInfo.pTessellationState = nullptr;
@@ -868,6 +861,26 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
+                                                                       VkShaderModule fragment_shader)
+{
+    array<VkPipelineShaderStageCreateInfo, 2> create_info;
+
+    create_info[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    create_info[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    create_info[0].module = vertex_shader;
+    create_info[0].pName = "main";
+    create_info[0].pSpecializationInfo = nullptr; // TODO: read more about
+
+    create_info[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    create_info[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    create_info[1].module = fragment_shader;
+    create_info[1].pName = "main";
+    create_info[1].pSpecializationInfo = nullptr;
+
+    return move(create_info);
 }
 
 VkPipelineLayout createPipelineLayout(VkDevice device)
