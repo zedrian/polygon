@@ -68,7 +68,6 @@ void checkAvailableValidationLayers();
 void checkAvailableExtensions(const char* const* extensions);
 VkImage background_image;
 
-
 vulkan_context context;
 
 
@@ -86,68 +85,68 @@ void checkVulkanResult(VkResult result, const char* const msg)
 }
 
 
-PFN_vkCreateInstance vkCreateInstance = NULL;
-PFN_vkEnumerateInstanceLayerProperties vkEnumerateInstanceLayerProperties = NULL;
-PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties = NULL;
-PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = NULL;
-PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices = NULL;
-PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties = NULL;
-PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties = NULL;
-PFN_vkCreateDevice vkCreateDevice = NULL;
-PFN_vkGetDeviceQueue vkGetDeviceQueue = NULL;
-PFN_vkCreateCommandPool vkCreateCommandPool = NULL;
-PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers = NULL;
-PFN_vkCreateFence vkCreateFence = NULL;
-PFN_vkBeginCommandBuffer vkBeginCommandBuffer = NULL;
-PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier = NULL;
-PFN_vkEndCommandBuffer vkEndCommandBuffer = NULL;
-PFN_vkQueueSubmit vkQueueSubmit = NULL;
-PFN_vkWaitForFences vkWaitForFences = NULL;
-PFN_vkResetFences vkResetFences = NULL;
-PFN_vkResetCommandBuffer vkResetCommandBuffer = NULL;
-PFN_vkCreateImageView vkCreateImageView = NULL;
-PFN_vkCreateImage vkCreateImage = NULL;
-PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements = NULL;
-PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties = NULL;
-PFN_vkAllocateMemory vkAllocateMemory = NULL;
-PFN_vkBindImageMemory vkBindImageMemory = NULL;
-PFN_vkCreateRenderPass vkCreateRenderPass = NULL;
-PFN_vkCreateFramebuffer vkCreateFramebuffer = NULL;
-PFN_vkCreateBuffer vkCreateBuffer = NULL;
-PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements = NULL;
-PFN_vkMapMemory vkMapMemory = NULL;
-PFN_vkUnmapMemory vkUnmapMemory = NULL;
-PFN_vkBindBufferMemory vkBindBufferMemory = NULL;
-PFN_vkCreateShaderModule vkCreateShaderModule = NULL;
-PFN_vkCreatePipelineLayout vkCreatePipelineLayout = NULL;
-PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines = NULL;
-PFN_vkCreateSemaphore vkCreateSemaphore = NULL;
-PFN_vkCmdBeginRenderPass vkCmdBeginRenderPass = NULL;
-PFN_vkCmdBindPipeline vkCmdBindPipeline = NULL;
-PFN_vkCmdSetViewport vkCmdSetViewport = NULL;
-PFN_vkCmdSetScissor vkCmdSetScissor = NULL;
-PFN_vkCmdBindVertexBuffers vkCmdBindVertexBuffers = NULL;
-PFN_vkCmdDraw vkCmdDraw = NULL;
-PFN_vkCmdEndRenderPass vkCmdEndRenderPass = NULL;
-PFN_vkDestroyFence vkDestroyFence = NULL;
-PFN_vkDestroySemaphore vkDestroySemaphore = NULL;
+PFN_vkCreateInstance vkCreateInstance = nullptr;
+PFN_vkEnumerateInstanceLayerProperties vkEnumerateInstanceLayerProperties = nullptr;
+PFN_vkEnumerateInstanceExtensionProperties vkEnumerateInstanceExtensionProperties = nullptr;
+PFN_vkGetInstanceProcAddr vkGetInstanceProcAddr = nullptr;
+PFN_vkEnumeratePhysicalDevices vkEnumeratePhysicalDevices = nullptr;
+PFN_vkGetPhysicalDeviceProperties vkGetPhysicalDeviceProperties = nullptr;
+PFN_vkGetPhysicalDeviceQueueFamilyProperties vkGetPhysicalDeviceQueueFamilyProperties = nullptr;
+PFN_vkCreateDevice vkCreateDevice = nullptr;
+PFN_vkGetDeviceQueue vkGetDeviceQueue = nullptr;
+PFN_vkCreateCommandPool vkCreateCommandPool = nullptr;
+PFN_vkAllocateCommandBuffers vkAllocateCommandBuffers = nullptr;
+PFN_vkCreateFence vkCreateFence = nullptr;
+PFN_vkBeginCommandBuffer vkBeginCommandBuffer = nullptr;
+PFN_vkCmdPipelineBarrier vkCmdPipelineBarrier = nullptr;
+PFN_vkEndCommandBuffer vkEndCommandBuffer = nullptr;
+PFN_vkQueueSubmit vkQueueSubmit = nullptr;
+PFN_vkWaitForFences vkWaitForFences = nullptr;
+PFN_vkResetFences vkResetFences = nullptr;
+PFN_vkResetCommandBuffer vkResetCommandBuffer = nullptr;
+PFN_vkCreateImageView vkCreateImageView = nullptr;
+PFN_vkCreateImage vkCreateImage = nullptr;
+PFN_vkGetImageMemoryRequirements vkGetImageMemoryRequirements = nullptr;
+PFN_vkGetPhysicalDeviceMemoryProperties vkGetPhysicalDeviceMemoryProperties = nullptr;
+PFN_vkAllocateMemory vkAllocateMemory = nullptr;
+PFN_vkBindImageMemory vkBindImageMemory = nullptr;
+PFN_vkCreateRenderPass vkCreateRenderPass = nullptr;
+PFN_vkCreateFramebuffer vkCreateFramebuffer = nullptr;
+PFN_vkCreateBuffer vkCreateBuffer = nullptr;
+PFN_vkGetBufferMemoryRequirements vkGetBufferMemoryRequirements = nullptr;
+PFN_vkMapMemory vkMapMemory = nullptr;
+PFN_vkUnmapMemory vkUnmapMemory = nullptr;
+PFN_vkBindBufferMemory vkBindBufferMemory = nullptr;
+PFN_vkCreateShaderModule vkCreateShaderModule = nullptr;
+PFN_vkCreatePipelineLayout vkCreatePipelineLayout = nullptr;
+PFN_vkCreateGraphicsPipelines vkCreateGraphicsPipelines = nullptr;
+PFN_vkCreateSemaphore vkCreateSemaphore = nullptr;
+PFN_vkCmdBeginRenderPass vkCmdBeginRenderPass = nullptr;
+PFN_vkCmdBindPipeline vkCmdBindPipeline = nullptr;
+PFN_vkCmdSetViewport vkCmdSetViewport = nullptr;
+PFN_vkCmdSetScissor vkCmdSetScissor = nullptr;
+PFN_vkCmdBindVertexBuffers vkCmdBindVertexBuffers = nullptr;
+PFN_vkCmdDraw vkCmdDraw = nullptr;
+PFN_vkCmdEndRenderPass vkCmdEndRenderPass = nullptr;
+PFN_vkDestroyFence vkDestroyFence = nullptr;
+PFN_vkDestroySemaphore vkDestroySemaphore = nullptr;
 
-PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = NULL;
-PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = NULL;
-PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT = NULL;
+PFN_vkCreateDebugReportCallbackEXT vkCreateDebugReportCallbackEXT = nullptr;
+PFN_vkDestroyDebugReportCallbackEXT vkDestroyDebugReportCallbackEXT = nullptr;
+PFN_vkDebugReportMessageEXT vkDebugReportMessageEXT = nullptr;
 
 // Windows platform:
-PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = NULL;
-PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = NULL;
-PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR = NULL;
-PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR = NULL;
-PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR = NULL;
+PFN_vkCreateWin32SurfaceKHR vkCreateWin32SurfaceKHR = nullptr;
+PFN_vkGetPhysicalDeviceSurfaceSupportKHR vkGetPhysicalDeviceSurfaceSupportKHR = nullptr;
+PFN_vkGetPhysicalDeviceSurfaceFormatsKHR vkGetPhysicalDeviceSurfaceFormatsKHR = nullptr;
+PFN_vkGetPhysicalDeviceSurfaceCapabilitiesKHR vkGetPhysicalDeviceSurfaceCapabilitiesKHR = nullptr;
+PFN_vkGetPhysicalDeviceSurfacePresentModesKHR vkGetPhysicalDeviceSurfacePresentModesKHR = nullptr;
 
 // Swapchain extension:
-PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR = NULL;
-PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR = NULL;
-PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = NULL;
-PFN_vkQueuePresentKHR vkQueuePresentKHR = NULL;
+PFN_vkCreateSwapchainKHR vkCreateSwapchainKHR = nullptr;
+PFN_vkGetSwapchainImagesKHR vkGetSwapchainImagesKHR = nullptr;
+PFN_vkAcquireNextImageKHR vkAcquireNextImageKHR = nullptr;
+PFN_vkQueuePresentKHR vkQueuePresentKHR = nullptr;
 
 
 struct vertex
@@ -160,7 +159,7 @@ void win32_LoadVulkan()
 
     HMODULE vulkan_module = LoadLibrary("vulkan-1.dll");
 
-    assert(vulkan_module, "Failed to load vulkan module.");
+    assert(static_cast<bool>(vulkan_module), "Failed to load vulkan module.");
 
     vkCreateInstance = (PFN_vkCreateInstance) GetProcAddress(vulkan_module, "vkCreateInstance");
     vkEnumerateInstanceLayerProperties = (PFN_vkEnumerateInstanceLayerProperties) GetProcAddress(vulkan_module,
@@ -283,12 +282,22 @@ void submitCommandBufferToQueue(VkQueue queue,
                                 VkCommandBuffer buffer,
                                 VkFence submit_fence);
 
-VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format);
-tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image);
+VkImage createDepthImage(VkDevice device,
+                         uint32_t width,
+                         uint32_t height,
+                         VkFormat format);
+tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
+                                                             VkImage image);
 
-void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset);
-VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format);
-VkRenderPass createRenderPass(VkDevice device, VkFormat color_format);
+void bindImageMemory(VkDevice device,
+                     VkImage image,
+                     VkDeviceMemory memory,
+                     int offset);
+VkImageView createDepthImageView(VkDevice device,
+                                 VkImage image,
+                                 VkFormat format);
+VkRenderPass createRenderPass(VkDevice device,
+                              VkFormat color_format);
 VkFramebuffer createFramebuffer(VkDevice device,
                                 VkRenderPass pass,
                                 uint32_t width,
@@ -326,11 +335,10 @@ VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags
 
 void render()
 {
-
     VkSemaphore presentCompleteSemaphore, renderingCompleteSemaphore;
     VkSemaphoreCreateInfo semaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 0, 0};
-    vkCreateSemaphore(context.device, &semaphoreCreateInfo, NULL, &presentCompleteSemaphore);
-    vkCreateSemaphore(context.device, &semaphoreCreateInfo, NULL, &renderingCompleteSemaphore);
+    vkCreateSemaphore(context.device, &semaphoreCreateInfo, nullptr, &presentCompleteSemaphore);
+    vkCreateSemaphore(context.device, &semaphoreCreateInfo, nullptr, &renderingCompleteSemaphore);
 
     uint32_t nextImageIdx;
     vkAcquireNextImageKHR(context.device, context.swapChain, UINT64_MAX,
@@ -465,7 +473,10 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     return DefWindowProc(hwnd, uMsg, wParam, lParam);
 }
 
-int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int nCmdShow)
+int CALLBACK WinMain(HINSTANCE hInstance,
+                     HINSTANCE hPrevInstance,
+                     LPSTR lpCmdLine,
+                     int nCmdShow)
 {
     try
     {
@@ -635,6 +646,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
             submitInfo.signalSemaphoreCount = 0;
             submitInfo.pSignalSemaphores = NULL;
             auto result = vkQueueSubmit(context.presentQueue, 1, &submitInfo, submitFence);
+            checkVulkanResult(result, "Failed to submit present queue.");
 
             vkWaitForFences(context.device, 1, &submitFence, VK_TRUE, UINT64_MAX);
             vkResetFences(context.device, 1, &submitFence);
@@ -893,7 +905,7 @@ VkPipelineLayout createPipelineLayout(VkDevice device)
     create_info.pPushConstantRanges = nullptr;
 
     VkPipelineLayout layout;
-    auto result = vkCreatePipelineLayout(context.device, &create_info, nullptr, &layout);
+    auto result = vkCreatePipelineLayout(device, &create_info, nullptr, &layout);
     checkVulkanResult(result, "Failed to create pipeline layout.");
 
     return layout;
@@ -907,8 +919,7 @@ VkShaderModule createShaderModule(VkDevice device,
     HANDLE file = 0;
 
     // load our vertex shader:
-    file = CreateFile(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                      NULL);
+    file = CreateFile(file_name, GENERIC_READ, 0, nullptr, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
     if (file == INVALID_HANDLE_VALUE)
     {
         OutputDebugStringA("Failed to open shader file.");
@@ -929,7 +940,9 @@ VkShaderModule createShaderModule(VkDevice device,
     return shader_module;
 }
 
-VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device, VkBuffer buffer, uint32_t memory_type_bits)
+VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
+                                             VkBuffer buffer,
+                                             uint32_t memory_type_bits)
 {
     VkMemoryRequirements requirements = {};
     vkGetBufferMemoryRequirements(device, buffer, &requirements);
@@ -1002,13 +1015,14 @@ VkFramebuffer createFramebuffer(VkDevice device,
     VkFramebuffer buffer;
 
     // create a framebuffer per swap chain imageView:
-    auto result = vkCreateFramebuffer(context.device, &framebuffer_create_info, NULL, &buffer);
+    auto result = vkCreateFramebuffer(device, &framebuffer_create_info, nullptr, &buffer);
     checkVulkanResult(result, "Failed to create framebuffer.");
 
     return buffer;
 }
 
-VkRenderPass createRenderPass(VkDevice device, VkFormat color_format)
+VkRenderPass createRenderPass(VkDevice device,
+                              VkFormat color_format)
 {
     VkAttachmentDescription pass_attachments[2] = {};
     pass_attachments[0].format = color_format;
@@ -1059,7 +1073,9 @@ VkRenderPass createRenderPass(VkDevice device, VkFormat color_format)
     return render_pass;
 }
 
-VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format)
+VkImageView createDepthImageView(VkDevice device,
+                                 VkImage image,
+                                 VkFormat format)
 {
     VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
     VkImageViewCreateInfo image_view_create_info = {};
@@ -1083,13 +1099,17 @@ VkImageView createDepthImageView(VkDevice device, VkImage image, VkFormat format
     return view;
 }
 
-void bindImageMemory(VkDevice device, VkImage image, VkDeviceMemory memory, int offset)
+void bindImageMemory(VkDevice device,
+                     VkImage image,
+                     VkDeviceMemory memory,
+                     int offset)
 {
     VkResult result = vkBindImageMemory(device, image, memory, offset);
     checkVulkanResult(result, "Failed to bind image memory.");
 }
 
-tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, VkImage image)
+tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
+                                                             VkImage image)
 {
     VkMemoryRequirements requirements = {};
     vkGetImageMemoryRequirements(device, image, &requirements);
@@ -1130,7 +1150,10 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device, Vk
     return tuple<VkDeviceMemory, uint32_t>(memory, memory_type_bits);
 }
 
-VkImage createDepthImage(VkDevice device, uint32_t width, uint32_t height, VkFormat format)
+VkImage createDepthImage(VkDevice device,
+                         uint32_t width,
+                         uint32_t height,
+                         VkFormat format)
 {
     VkImageCreateInfo imageCreateInfo = {};
     imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
@@ -1170,7 +1193,7 @@ void submitCommandBufferToQueue(VkQueue queue,
     submitInfo.signalSemaphoreCount = 0;
     submitInfo.pSignalSemaphores = nullptr;
 
-    VkResult result = vkQueueSubmit(context.presentQueue, 1, &submitInfo, submit_fence);
+    VkResult result = vkQueueSubmit(queue, 1, &submitInfo, submit_fence);
     checkVulkanResult(result, "Could not submit queue.");
 }
 
@@ -1178,10 +1201,11 @@ vector<VkImage> getSwapchainImages(VkDevice device,
                                    VkSwapchainKHR swapchain)
 {
     uint32_t image_count = 0;
-    vkGetSwapchainImagesKHR(context.device, context.swapChain, &image_count, nullptr);
+    vkGetSwapchainImagesKHR(device, swapchain, &image_count, nullptr);
+    cout << "Swapchain images: " << image_count << endl;
 
     vector<VkImage> images(image_count);
-    vkGetSwapchainImagesKHR(context.device, context.swapChain, &image_count, images.data());
+    vkGetSwapchainImagesKHR(device, swapchain, &image_count, images.data());
 
     return images;
 }
