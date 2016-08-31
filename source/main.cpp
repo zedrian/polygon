@@ -296,7 +296,11 @@ VkFramebuffer createFramebuffer(VkDevice device,
                                 VkImageView depth_image_view);
 
 VkBuffer createVertexInputBuffer(VkDevice device);
-VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device, VkBuffer buffer, uint32_t memory_type_bits);
+VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
+                                             VkBuffer buffer,
+                                             uint32_t memory_type_bits);
+VkShaderModule createShaderModule(VkDevice device,
+                                  const char* file_name);
 
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
@@ -656,7 +660,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         // set buffer content:
         void* mapped;
         auto result = vkMapMemory(context.device, vertexBufferMemory, 0, VK_WHOLE_SIZE, 0, &mapped);
-        checkVulkanResult(result, "Failed to mapp buffer memory.");
+        checkVulkanResult(result, "Failed to map buffer memory.");
 
         vertex* triangle = (vertex*) mapped;
         vertex v1 = {-1.0f, -1.0f, 0, 1.0f};
@@ -673,50 +677,8 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
 
         // TUTORIAL_014 Shaders
-        uint32_t codeSize;
-        char* code = new char[10000];
-        HANDLE fileHandle = 0;
-
-        // load our vertex shader:
-        fileHandle = CreateFile("../data/shaders/vert.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                                NULL);
-        if (fileHandle == INVALID_HANDLE_VALUE)
-        {
-            OutputDebugStringA("Failed to open shader file.");
-            exit(1);
-        }
-        ReadFile((HANDLE) fileHandle, code, 10000, (LPDWORD) &codeSize, 0);
-        CloseHandle(fileHandle);
-
-        VkShaderModuleCreateInfo vertexShaderCreationInfo = {};
-        vertexShaderCreationInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        vertexShaderCreationInfo.codeSize = codeSize;
-        vertexShaderCreationInfo.pCode = (uint32_t*) code;
-
-        VkShaderModule vertexShaderModule;
-        result = vkCreateShaderModule(context.device, &vertexShaderCreationInfo, NULL, &vertexShaderModule);
-        checkVulkanResult(result, "Failed to create vertex shader module.");
-
-        // load our fragment shader:
-        fileHandle = CreateFile("../data/shaders/frag.spv", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
-                                NULL);
-        if (fileHandle == INVALID_HANDLE_VALUE)
-        {
-            OutputDebugStringA("Failed to open shader file.");
-            exit(1);
-        }
-        ReadFile((HANDLE) fileHandle, code, 10000, (LPDWORD) &codeSize, 0);
-        CloseHandle(fileHandle);
-
-        VkShaderModuleCreateInfo fragmentShaderCreationInfo = {};
-        fragmentShaderCreationInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
-        fragmentShaderCreationInfo.codeSize = codeSize;
-        fragmentShaderCreationInfo.pCode = (uint32_t*) code;
-
-        VkShaderModule fragmentShaderModule;
-        result = vkCreateShaderModule(context.device, &fragmentShaderCreationInfo, NULL, &fragmentShaderModule);
-        checkVulkanResult(result, "Failed to create vertex shader module.");
-
+        VkShaderModule vertexShaderModule = createShaderModule(context.device, "../data/shaders/vert.spv");
+        VkShaderModule fragmentShaderModule = createShaderModule(context.device, "../data/shaders/frag.spv");
 
         // TUTORIAL_015 Graphics Pipeline:
         // empty pipeline layout:
@@ -915,6 +877,36 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkShaderModule createShaderModule(VkDevice device,
+                                  const char* file_name)
+{
+    uint32_t code_size;
+    char* code = new char[10000];
+    HANDLE file = 0;
+
+    // load our vertex shader:
+    file = CreateFile(file_name, GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL,
+                            NULL);
+    if (file == INVALID_HANDLE_VALUE)
+    {
+        OutputDebugStringA("Failed to open shader file.");
+        exit(1);
+    }
+    ReadFile((HANDLE) file, code, 10000, (LPDWORD) &code_size, 0);
+    CloseHandle(file);
+
+    VkShaderModuleCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
+    create_info.codeSize = code_size;
+    create_info.pCode = (uint32_t*) code;
+
+    VkShaderModule shader_module;
+    auto result = vkCreateShaderModule(device, &create_info, nullptr, &shader_module);
+    checkVulkanResult(result, "Failed to create shader module.");
+
+    return shader_module;
 }
 
 VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device, VkBuffer buffer, uint32_t memory_type_bits)
