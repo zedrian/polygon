@@ -301,6 +301,7 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
                                              uint32_t memory_type_bits);
 VkShaderModule createShaderModule(VkDevice device,
                                   const char* file_name);
+VkPipelineLayout createPipelineLayout(VkDevice device);
 
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
@@ -682,15 +683,7 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
         // TUTORIAL_015 Graphics Pipeline:
         // empty pipeline layout:
-        VkPipelineLayoutCreateInfo layoutCreateInfo = {};
-        layoutCreateInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-        layoutCreateInfo.setLayoutCount = 0;
-        layoutCreateInfo.pSetLayouts = NULL;    // Not setting any bindings!
-        layoutCreateInfo.pushConstantRangeCount = 0;
-        layoutCreateInfo.pPushConstantRanges = NULL;
-
-        result = vkCreatePipelineLayout(context.device, &layoutCreateInfo, NULL, &context.pipelineLayout);
-        checkVulkanResult(result, "Failed to create pipeline layout.");
+        context.pipelineLayout = createPipelineLayout(context.device);
 
         // setup shader stages:
         VkPipelineShaderStageCreateInfo shaderStageCreateInfo[2] = {};
@@ -877,6 +870,22 @@ int CALLBACK WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+VkPipelineLayout createPipelineLayout(VkDevice device)
+{
+    VkPipelineLayoutCreateInfo create_info = {};
+    create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    create_info.setLayoutCount = 0;
+    create_info.pSetLayouts = nullptr;    // Not setting any bindings!
+    create_info.pushConstantRangeCount = 0;
+    create_info.pPushConstantRanges = nullptr;
+
+    VkPipelineLayout layout;
+    auto result = vkCreatePipelineLayout(context.device, &create_info, nullptr, &layout);
+    checkVulkanResult(result, "Failed to create pipeline layout.");
+
+    return layout;
 }
 
 VkShaderModule createShaderModule(VkDevice device,
