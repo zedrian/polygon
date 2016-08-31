@@ -316,6 +316,7 @@ VkPipelineLayout createPipelineLayout(VkDevice device);
 array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
                                                                        VkShaderModule fragment_shader);
 
+VkSemaphore createSemaphore(VkDevice device);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -335,14 +336,12 @@ VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags
 
 void render()
 {
-    VkSemaphore presentCompleteSemaphore, renderingCompleteSemaphore;
-    VkSemaphoreCreateInfo semaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 0, 0};
-    vkCreateSemaphore(context.device, &semaphoreCreateInfo, nullptr, &presentCompleteSemaphore);
-    vkCreateSemaphore(context.device, &semaphoreCreateInfo, nullptr, &renderingCompleteSemaphore);
+    VkSemaphore presentCompleteSemaphore = createSemaphore(context.device);
+    VkSemaphore renderingCompleteSemaphore = createSemaphore(context.device);
 
     uint32_t nextImageIdx;
-    vkAcquireNextImageKHR(context.device, context.swapChain, UINT64_MAX,
-                          presentCompleteSemaphore, VK_NULL_HANDLE, &nextImageIdx);
+    vkAcquireNextImageKHR(context.device, context.swapChain, UINT64_MAX, presentCompleteSemaphore, VK_NULL_HANDLE,
+                          &nextImageIdx);
 
     VkCommandBufferBeginInfo beginInfo = {};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -372,8 +371,9 @@ void render()
                          1, &layoutTransitionBarrier);
 
     // activate render pass:
-    VkClearValue clearValue[] = {{1.0f, 1.0f, 1.0f, 1.0f},
+    VkClearValue clearValue[] = {{0.5f, 0.5f, 0.5f, 1.0f},
                                  {1.0,  0.0}};
+
     VkRenderPassBeginInfo renderPassBeginInfo = {};
     renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     renderPassBeginInfo.renderPass = context.renderPass;
@@ -453,20 +453,27 @@ void render()
     vkDestroySemaphore(context.device, renderingCompleteSemaphore, NULL);
 }
 
+VkSemaphore createSemaphore(VkDevice device)
+{
+    VkSemaphoreCreateInfo semaphoreCreateInfo = {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 0, 0};
+
+    VkSemaphore semaphore;
+    vkCreateSemaphore(device, &semaphoreCreateInfo, nullptr, &semaphore);
+
+    return semaphore;
+}
+
 LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_CLOSE:
-            PostQuitMessage(0);
+        case WM_CLOSE:PostQuitMessage(0);
             break;
 
-        case WM_PAINT:
-            render();
+        case WM_PAINT:render();
             break;
 
-        default:
-            break;
+        default:break;
     }
 
     // a pass-through for now. We will return to this callback
@@ -855,7 +862,8 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             if (msg.message == WM_QUIT)
             {
                 done = true;
-            } else
+            }
+            else
             {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -1288,7 +1296,8 @@ void checkSurfaceResolution(VkExtent2D& surface_resolution)
     {
         surface_resolution.width = context.width;
         surface_resolution.height = context.height;
-    } else
+    }
+    else
     {
         context.width = surface_resolution.width;
         context.height = surface_resolution.height;
@@ -1354,7 +1363,8 @@ tuple<VkFormat, VkColorSpaceKHR> getColorFormatAndSpace()
     if (surface_format_count == 1 && surface_formats[0].format == VK_FORMAT_UNDEFINED)
     {
         color_format = VK_FORMAT_B8G8R8_UNORM;
-    } else
+    }
+    else
     {
         color_format = surface_formats[0].format;
     }
