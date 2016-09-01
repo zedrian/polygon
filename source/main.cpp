@@ -324,6 +324,8 @@ void commandPipelineBarrier(VkCommandBuffer buffer, VkPipelineStageFlags source_
                             VkPipelineStageFlags destination_stage_mask, VkAccessFlagBits source_access_flags,
                             VkAccessFlagBits destination_access_flags, VkImageLayout old_layout,
                             VkImageLayout new_layout, VkImage next_image);
+void commandBeginRenderPass(VkCommandBuffer command_buffer, VkRenderPass pass, VkFramebuffer framebuffer,
+                            const VkRect2D& render_area, VkClearValue* clear_value);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -353,23 +355,16 @@ void render()
     // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
     commandPipelineBarrier(context.drawCmdBuffer,
                            VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                           VK_ACCESS_MEMORY_READ_BIT,
-                           static_cast<VkAccessFlagBits>(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT),
+                           VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
                            VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
                            context.presentImages[next_image_index]);
 
     // activate render pass:
     VkClearValue clearValue[] = {{0.5f, 0.5f, 0.5f, 1.0f},
                                  {1.0,  0.0}};
-
-    VkRenderPassBeginInfo renderPassBeginInfo = {};
-    renderPassBeginInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-    renderPassBeginInfo.renderPass = context.renderPass;
-    renderPassBeginInfo.framebuffer = context.frameBuffers[next_image_index];
-    renderPassBeginInfo.renderArea = {0, 0, context.width, context.height};
-    renderPassBeginInfo.clearValueCount = 2;
-    renderPassBeginInfo.pClearValues = clearValue;
-    vkCmdBeginRenderPass(context.drawCmdBuffer, &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+    VkRect2D render_area {0, 0, context.width, context.height};
+    commandBeginRenderPass(context.drawCmdBuffer, context.renderPass, context.frameBuffers[next_image_index],
+                           render_area, clearValue);
 
     // bind the graphics pipeline to the command buffer. Any vkDraw command afterwards is affeted by this pipeline!
     vkCmdBindPipeline(context.drawCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipeline);
@@ -423,6 +418,23 @@ void render()
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+void commandBeginRenderPass(VkCommandBuffer command_buffer,
+                            VkRenderPass pass,
+                            VkFramebuffer framebuffer,
+                            const VkRect2D& render_area,
+                            VkClearValue* clear_value)
+{
+    VkRenderPassBeginInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+    info.renderPass = pass;
+    info.framebuffer = framebuffer;
+    info.renderArea = render_area;
+    info.clearValueCount = 2;
+    info.pClearValues = clear_value;
+
+    vkCmdBeginRenderPass(command_buffer, &info, VK_SUBPASS_CONTENTS_INLINE);
 }
 
 void commandPipelineBarrier(VkCommandBuffer buffer,
@@ -507,13 +519,16 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_CLOSE:PostQuitMessage(0);
+        case WM_CLOSE:
+            PostQuitMessage(0);
             break;
 
-        case WM_PAINT:render();
+        case WM_PAINT:
+            render();
             break;
 
-        default:break;
+        default:
+            break;
     }
 
     // a pass-through for now. We will return to this callback
@@ -898,8 +913,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             if (msg.message == WM_QUIT)
             {
                 done = true;
-            }
-            else
+            } else
             {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -1332,8 +1346,7 @@ void checkSurfaceResolution(VkExtent2D& surface_resolution)
     {
         surface_resolution.width = context.width;
         surface_resolution.height = context.height;
-    }
-    else
+    } else
     {
         context.width = surface_resolution.width;
         context.height = surface_resolution.height;
@@ -1399,8 +1412,7 @@ tuple<VkFormat, VkColorSpaceKHR> getColorFormatAndSpace()
     if (surface_format_count == 1 && surface_formats[0].format == VK_FORMAT_UNDEFINED)
     {
         color_format = VK_FORMAT_B8G8R8_UNORM;
-    }
-    else
+    } else
     {
         color_format = surface_formats[0].format;
     }
