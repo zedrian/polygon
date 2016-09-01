@@ -320,6 +320,10 @@ VkSemaphore createSemaphore(VkDevice device);
 uint32_t acquireNextImageIndex(VkDevice device, VkSwapchainKHR swapchain, VkSemaphore semaphore);
 void beginCommandBuffer(VkCommandBuffer buffer, VkCommandBufferUsageFlagBits usage_bits);
 void queuePresent(VkQueue queue, VkSemaphore* semaphore, VkSwapchainKHR* swapchain, uint32_t* next_image_index);
+void commandPipelineBarrier(VkCommandBuffer buffer, VkPipelineStageFlags source_stage_mask,
+                            VkPipelineStageFlags destination_stage_mask, VkAccessFlagBits source_access_flags,
+                            VkAccessFlagBits destination_access_flags, VkImageLayout old_layout,
+                            VkImageLayout new_layout, VkImage next_image);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -347,25 +351,12 @@ void render()
     beginCommandBuffer(context.drawCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
 
     // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    VkImageMemoryBarrier layoutTransitionBarrier = {};
-    layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    layoutTransitionBarrier.srcAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    layoutTransitionBarrier.dstAccessMask = VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    layoutTransitionBarrier.oldLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    layoutTransitionBarrier.newLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    layoutTransitionBarrier.image = context.presentImages[next_image_index];
-    VkImageSubresourceRange resourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    layoutTransitionBarrier.subresourceRange = resourceRange;
-
-    vkCmdPipelineBarrier(context.drawCmdBuffer,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                         0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &layoutTransitionBarrier);
+    commandPipelineBarrier(context.drawCmdBuffer,
+                           VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                           VK_ACCESS_MEMORY_READ_BIT,
+                           static_cast<VkAccessFlagBits>(VK_ACCESS_COLOR_ATTACHMENT_READ_BIT | VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT),
+                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                           context.presentImages[next_image_index]);
 
     // activate render pass:
     VkClearValue clearValue[] = {{0.5f, 0.5f, 0.5f, 1.0f},
@@ -399,23 +390,11 @@ void render()
     vkCmdEndRenderPass(context.drawCmdBuffer);
 
     // change layout back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    VkImageMemoryBarrier prePresentBarrier = {};
-    prePresentBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    prePresentBarrier.srcAccessMask = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT;
-    prePresentBarrier.dstAccessMask = VK_ACCESS_MEMORY_READ_BIT;
-    prePresentBarrier.oldLayout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
-    prePresentBarrier.newLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
-    prePresentBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    prePresentBarrier.subresourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
-    prePresentBarrier.image = context.presentImages[next_image_index];
-    vkCmdPipelineBarrier(context.drawCmdBuffer,
-                         VK_PIPELINE_STAGE_ALL_COMMANDS_BIT,
-                         VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                         0,
-                         0, nullptr,
-                         0, nullptr,
-                         1, &prePresentBarrier);
+    commandPipelineBarrier(context.drawCmdBuffer,
+                           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                           VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                           context.presentImages[next_image_index]);
 
     vkEndCommandBuffer(context.drawCmdBuffer);
 
@@ -444,6 +423,36 @@ void render()
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+void commandPipelineBarrier(VkCommandBuffer buffer,
+                            VkPipelineStageFlags source_stage_mask,
+                            VkPipelineStageFlags destination_stage_mask,
+                            VkAccessFlagBits source_access_flags,
+                            VkAccessFlagBits destination_access_flags,
+                            VkImageLayout old_layout,
+                            VkImageLayout new_layout,
+                            VkImage next_image)
+{
+    VkImageMemoryBarrier layoutTransitionBarrier = {};
+    layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    layoutTransitionBarrier.srcAccessMask = source_access_flags;
+    layoutTransitionBarrier.dstAccessMask = destination_access_flags;
+    layoutTransitionBarrier.oldLayout = old_layout;
+    layoutTransitionBarrier.newLayout = new_layout;
+    layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    layoutTransitionBarrier.image = next_image;
+    VkImageSubresourceRange resourceRange = {VK_IMAGE_ASPECT_COLOR_BIT, 0, 1, 0, 1};
+    layoutTransitionBarrier.subresourceRange = resourceRange;
+
+    vkCmdPipelineBarrier(buffer,
+                         source_stage_mask,
+                         destination_stage_mask,
+                         0,
+                         0, nullptr,
+                         0, nullptr,
+                         1, &layoutTransitionBarrier);
 }
 
 void queuePresent(VkQueue queue,
