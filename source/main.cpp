@@ -286,6 +286,10 @@ VkImage createDepthImage(VkDevice device,
                          uint32_t width,
                          uint32_t height,
                          VkFormat format);
+VkImage createColorImage(VkDevice device,
+                         uint32_t width,
+                         uint32_t height,
+                         VkFormat format);
 tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
                                                              VkImage image);
 
@@ -678,6 +682,8 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         context.depthImage = createDepthImage(context.device, context.width, context.height, format);
         tie(image_memory, memory_type_bits) = allocateDeviceMemoryForImage(context.device, context.depthImage);
         bindImageMemory(context.device, context.depthImage, image_memory, 0);
+
+//        background_image = createColorImage(context.device, context.width, context.height, format);
 
         // before using this depth buffer we must change it's layout:
         {
@@ -1249,6 +1255,33 @@ VkImage createDepthImage(VkDevice device,
     VkImage image;
     VkResult result = vkCreateImage(device, &imageCreateInfo, nullptr, &image);
     checkVulkanResult(result, "Failed to create depth image.");
+
+    return image;
+}
+
+VkImage createColorImage(VkDevice device,
+                         uint32_t width,
+                         uint32_t height,
+                         VkFormat format)
+{
+    VkImageCreateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.imageType = VK_IMAGE_TYPE_2D;
+    info.format = format;
+    info.extent = {width, height, 1};
+    info.mipLevels = 1;
+    info.arrayLayers = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    info.queueFamilyIndexCount = 0;
+    info.pQueueFamilyIndices = nullptr;
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+
+    VkImage image;
+    auto result = vkCreateImage(device, &info, nullptr, &image);
+    checkVulkanResult(result, "Failed to create color image.");
 
     return image;
 }
