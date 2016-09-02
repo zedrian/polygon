@@ -326,6 +326,7 @@ void commandPipelineBarrier(VkCommandBuffer buffer, VkPipelineStageFlags source_
                             VkImageLayout new_layout, VkImage next_image);
 void commandBeginRenderPass(VkCommandBuffer command_buffer, VkRenderPass pass, VkFramebuffer framebuffer,
                             const VkRect2D& render_area, VkClearValue* clear_value);
+VkFence createFence(VkDevice device);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -394,10 +395,7 @@ void render()
     vkEndCommandBuffer(context.drawCmdBuffer);
 
     // present:
-    VkFence renderFence;
-    VkFenceCreateInfo fenceCreateInfo = {};
-    fenceCreateInfo.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
-    vkCreateFence(context.device, &fenceCreateInfo, NULL, &renderFence);
+    VkFence renderFence = createFence(context.device);
 
     VkPipelineStageFlags waitStageMash = {VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
     VkSubmitInfo submitInfo = {};
@@ -418,6 +416,18 @@ void render()
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+VkFence createFence(VkDevice device)
+{
+    VkFence fence;
+    VkFenceCreateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
+
+    auto result = vkCreateFence(device, &info, nullptr, &fence);
+    checkVulkanResult(result, "Failed to create fence.");
+
+    return fence;
 }
 
 void commandBeginRenderPass(VkCommandBuffer command_buffer,
