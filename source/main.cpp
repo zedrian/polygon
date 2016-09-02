@@ -327,6 +327,7 @@ void commandPipelineBarrier(VkCommandBuffer buffer, VkPipelineStageFlags source_
 void commandBeginRenderPass(VkCommandBuffer command_buffer, VkRenderPass pass, VkFramebuffer framebuffer,
                             const VkRect2D& render_area, VkClearValue* clear_value);
 VkFence createFence(VkDevice device);
+void queueSubmit(VkQueue queue, VkFence fence, VkCommandBuffer command_buffer, VkSemaphore* waiting_semaphore, VkSemaphore* signaling_semaphore);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -352,62 +353,50 @@ void render()
     uint32_t next_image_index = acquireNextImageIndex(context.device, context.swapChain, present_complete_semaphore);
 
     beginCommandBuffer(context.drawCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
+    {
+        // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
+        commandPipelineBarrier(context.drawCmdBuffer,
+                               VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+                               VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+                               VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
+                               context.presentImages[next_image_index]);
 
-    // change image layout from VK_IMAGE_LAYOUT_PRESENT_SRC_KHR to VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL
-    commandPipelineBarrier(context.drawCmdBuffer,
-                           VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-                           VK_ACCESS_MEMORY_READ_BIT, VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
-                           VK_IMAGE_LAYOUT_PRESENT_SRC_KHR, VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL,
-                           context.presentImages[next_image_index]);
+        // activate render pass:
+        VkClearValue clearValue[] = {{0.5f, 0.5f, 0.5f, 1.0f},
+                                     {1.0,  0.0}};
+        VkRect2D render_area{0, 0, context.width, context.height};
+        commandBeginRenderPass(context.drawCmdBuffer, context.renderPass, context.frameBuffers[next_image_index], render_area, clearValue);
+        {
+            // bind the graphics pipeline to the command buffer. Any vkDraw command afterwards is affeted by this pipeline!
+            vkCmdBindPipeline(context.drawCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipeline);
 
-    // activate render pass:
-    VkClearValue clearValue[] = {{0.5f, 0.5f, 0.5f, 1.0f},
-                                 {1.0,  0.0}};
-    VkRect2D render_area {0, 0, context.width, context.height};
-    commandBeginRenderPass(context.drawCmdBuffer, context.renderPass, context.frameBuffers[next_image_index],
-                           render_area, clearValue);
+            // take care of dynamic state:
+            VkViewport viewport = {0, 0, context.width, context.height, 0, 1};
+            vkCmdSetViewport(context.drawCmdBuffer, 0, 1, &viewport);
 
-    // bind the graphics pipeline to the command buffer. Any vkDraw command afterwards is affeted by this pipeline!
-    vkCmdBindPipeline(context.drawCmdBuffer, VK_PIPELINE_BIND_POINT_GRAPHICS, context.pipeline);
+            VkRect2D scissor = {0, 0, context.width, context.height};
+            vkCmdSetScissor(context.drawCmdBuffer, 0, 1, &scissor);
 
-    // take care of dynamic state:
-    VkViewport viewport = {0, 0, context.width, context.height, 0, 1};
-    vkCmdSetViewport(context.drawCmdBuffer, 0, 1, &viewport);
+            // render the triangle:
+            VkDeviceSize offsets = {};
+            vkCmdBindVertexBuffers(context.drawCmdBuffer, 0, 1, &context.vertexInputBuffer, &offsets);
 
-    VkRect2D scissor = {0, 0, context.width, context.height};
-    vkCmdSetScissor(context.drawCmdBuffer, 0, 1, &scissor);
+            vkCmdDraw(context.drawCmdBuffer, 3, 1, 0, 0);
+        }
+        vkCmdEndRenderPass(context.drawCmdBuffer);
 
-    // render the triangle:
-    VkDeviceSize offsets = {};
-    vkCmdBindVertexBuffers(context.drawCmdBuffer, 0, 1, &context.vertexInputBuffer, &offsets);
-
-    vkCmdDraw(context.drawCmdBuffer, 3, 1, 0, 0);
-
-    vkCmdEndRenderPass(context.drawCmdBuffer);
-
-    // change layout back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
-    commandPipelineBarrier(context.drawCmdBuffer,
-                           VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
-                           VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
-                           VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
-                           context.presentImages[next_image_index]);
-
+        // change layout back to VK_IMAGE_LAYOUT_PRESENT_SRC_KHR
+        commandPipelineBarrier(context.drawCmdBuffer,
+                               VK_PIPELINE_STAGE_ALL_COMMANDS_BIT, VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT,
+                               VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT, VK_ACCESS_MEMORY_READ_BIT,
+                               VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
+                               context.presentImages[next_image_index]);
+    }
     vkEndCommandBuffer(context.drawCmdBuffer);
 
     // present:
     VkFence renderFence = createFence(context.device);
-
-    VkPipelineStageFlags waitStageMash = {VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 1;
-    submitInfo.pWaitSemaphores = &present_complete_semaphore;
-    submitInfo.pWaitDstStageMask = &waitStageMash;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &context.drawCmdBuffer;
-    submitInfo.signalSemaphoreCount = 1;
-    submitInfo.pSignalSemaphores = &rendering_complete_semaphore;
-    vkQueueSubmit(context.presentQueue, 1, &submitInfo, renderFence);
+    queueSubmit(context.presentQueue, renderFence, context.drawCmdBuffer, &present_complete_semaphore, &rendering_complete_semaphore);
 
     vkWaitForFences(context.device, 1, &renderFence, VK_TRUE, UINT64_MAX);
     vkDestroyFence(context.device, renderFence, nullptr);
@@ -416,6 +405,27 @@ void render()
 
     vkDestroySemaphore(context.device, present_complete_semaphore, nullptr);
     vkDestroySemaphore(context.device, rendering_complete_semaphore, nullptr);
+}
+
+void queueSubmit(VkQueue queue,
+                 VkFence fence,
+                 VkCommandBuffer command_buffer,
+                 VkSemaphore* waiting_semaphore,
+                 VkSemaphore* signaling_semaphore)
+{
+    VkPipelineStageFlags waitStageMash = {VK_PIPELINE_STAGE_BOTTOM_OF_PIPE_BIT};
+
+    VkSubmitInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
+    info.waitSemaphoreCount = 1;
+    info.pWaitSemaphores = waiting_semaphore;
+    info.pWaitDstStageMask = &waitStageMash;
+    info.commandBufferCount = 1;
+    info.pCommandBuffers = &command_buffer;
+    info.signalSemaphoreCount = 1;
+    info.pSignalSemaphores = signaling_semaphore;
+
+    vkQueueSubmit(context.presentQueue, 1, &info, fence);
 }
 
 VkFence createFence(VkDevice device)
@@ -529,16 +539,13 @@ LRESULT CALLBACK WindowProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     switch (uMsg)
     {
-        case WM_CLOSE:
-            PostQuitMessage(0);
+        case WM_CLOSE:PostQuitMessage(0);
             break;
 
-        case WM_PAINT:
-            render();
+        case WM_PAINT:render();
             break;
 
-        default:
-            break;
+        default:break;
     }
 
     // a pass-through for now. We will return to this callback
@@ -923,7 +930,8 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             if (msg.message == WM_QUIT)
             {
                 done = true;
-            } else
+            }
+            else
             {
                 TranslateMessage(&msg);
                 DispatchMessage(&msg);
@@ -1356,7 +1364,8 @@ void checkSurfaceResolution(VkExtent2D& surface_resolution)
     {
         surface_resolution.width = context.width;
         surface_resolution.height = context.height;
-    } else
+    }
+    else
     {
         context.width = surface_resolution.width;
         context.height = surface_resolution.height;
@@ -1422,7 +1431,8 @@ tuple<VkFormat, VkColorSpaceKHR> getColorFormatAndSpace()
     if (surface_format_count == 1 && surface_formats[0].format == VK_FORMAT_UNDEFINED)
     {
         color_format = VK_FORMAT_B8G8R8_UNORM;
-    } else
+    }
+    else
     {
         color_format = surface_formats[0].format;
     }
