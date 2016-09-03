@@ -278,9 +278,6 @@ VkSwapchainKHR createSwapchain(VkDevice device,
                                VkPresentModeKHR presentation_mode);
 vector<VkImage> getSwapchainImages(VkDevice device,
                                    VkSwapchainKHR swapchain);
-void submitCommandBufferToQueue(VkQueue queue,
-                                VkCommandBuffer buffer,
-                                VkFence submit_fence);
 
 VkImage createDepthImage(VkDevice device,
                          uint32_t width,
@@ -668,16 +665,14 @@ int CALLBACK WinMain(HINSTANCE hInstance,
 
             // start recording out image layout change barrier on our setup command buffer:
             beginCommandBuffer(context.setupCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
-
             commandPipelineBarrier(context.setupCmdBuffer,
                                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                    static_cast<VkAccessFlagBits>(0), VK_ACCESS_MEMORY_READ_BIT,
                                    VK_IMAGE_LAYOUT_UNDEFINED, VK_IMAGE_LAYOUT_PRESENT_SRC_KHR,
                                    context.presentImages[i], VK_IMAGE_ASPECT_COLOR_BIT);
-
             vkEndCommandBuffer(context.setupCmdBuffer);
 
-            submitCommandBufferToQueue(context.presentQueue, context.setupCmdBuffer, submitFence);
+            queueSubmit(context.presentQueue, submitFence, context.setupCmdBuffer, VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT, nullptr, nullptr);
 
             vkWaitForFences(context.device, 1, &submitFence, VK_TRUE, UINT64_MAX);
             vkResetFences(context.device, 1, &submitFence);
@@ -972,6 +967,7 @@ VkPipelineLayout createPipelineLayout(VkDevice device)
     create_info.pPushConstantRanges = nullptr;
 
     VkPipelineLayout layout;
+
     auto result = vkCreatePipelineLayout(device, &create_info, nullptr, &layout);
     checkVulkanResult(result, "Failed to create pipeline layout.");
 
@@ -1001,6 +997,7 @@ VkShaderModule createShaderModule(VkDevice device,
     create_info.pCode = (uint32_t*) code;
 
     VkShaderModule shader_module;
+
     auto result = vkCreateShaderModule(device, &create_info, nullptr, &shader_module);
     checkVulkanResult(result, "Failed to create shader module.");
 
@@ -1011,13 +1008,13 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
                                              VkBuffer buffer,
                                              uint32_t memory_type_bits)
 {
-    VkMemoryRequirements requirements = {};
+    VkMemoryRequirements requirements{};
     vkGetBufferMemoryRequirements(device, buffer, &requirements);
 
-    VkMemoryAllocateInfo allocate_info = {};
-    allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    allocate_info.pNext = nullptr;
-    allocate_info.allocationSize = requirements.size;
+    VkMemoryAllocateInfo info{};
+    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    info.pNext = nullptr;
+    info.allocationSize = requirements.size;
 
     uint32_t vertex_memory_type_bits = requirements.memoryTypeBits;
     VkMemoryPropertyFlags desired_memory_flags = VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT;
@@ -1028,7 +1025,7 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
         {
             if ((memory_type.propertyFlags & desired_memory_flags) == desired_memory_flags)
             {
-                allocate_info.memoryTypeIndex = i;
+                info.memoryTypeIndex = i;
                 break;
             }
         }
@@ -1036,7 +1033,8 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
     }
 
     VkDeviceMemory memory;
-    auto result = vkAllocateMemory(context.device, &allocate_info, nullptr, &memory);
+
+    auto result = vkAllocateMemory(context.device, &info, nullptr, &memory);
     checkVulkanResult(result, "Failed to allocate buffer memory.");
 
     return memory;
@@ -1044,7 +1042,7 @@ VkDeviceMemory allocateDeviceMemoryForBuffer(VkDevice device,
 
 VkBuffer createVertexInputBuffer(VkDevice device)
 {
-    VkBufferCreateInfo vertex_buffer_create_info = {};
+    VkBufferCreateInfo vertex_buffer_create_info{};
     vertex_buffer_create_info.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
     vertex_buffer_create_info.size = sizeof(vertex) * 3;
     vertex_buffer_create_info.usage = VK_BUFFER_USAGE_VERTEX_BUFFER_BIT;
@@ -1053,6 +1051,7 @@ VkBuffer createVertexInputBuffer(VkDevice device)
     vertex_buffer_create_info.pQueueFamilyIndices = nullptr;
 
     VkBuffer buffer;
+
     auto result = vkCreateBuffer(device, &vertex_buffer_create_info, nullptr, &buffer);
     checkVulkanResult(result, "Failed to create vertex input buffer.");
 
@@ -1134,8 +1133,9 @@ VkRenderPass createRenderPass(VkDevice device,
     render_pass_create_info.pSubpasses = &subpass;
 
     VkRenderPass render_pass;
+
     auto result = vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass);
-    checkVulkanResult(result, "Failed to create renderpass");
+    checkVulkanResult(result, "Failed to create render pass");
 
     return render_pass;
 }
@@ -1144,23 +1144,21 @@ VkImageView createDepthImageView(VkDevice device,
                                  VkImage image,
                                  VkFormat format)
 {
-    VkImageAspectFlags aspect_mask = VK_IMAGE_ASPECT_DEPTH_BIT;
-    VkImageViewCreateInfo image_view_create_info = {};
-    image_view_create_info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
-    image_view_create_info.image = image;
-    image_view_create_info.viewType = VK_IMAGE_VIEW_TYPE_2D;
-    image_view_create_info.format = format;
-    image_view_create_info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY,
-                                         VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
-    image_view_create_info.subresourceRange.aspectMask = aspect_mask;
-    image_view_create_info.subresourceRange.baseMipLevel = 0;
-    image_view_create_info.subresourceRange.levelCount = 1;
-    image_view_create_info.subresourceRange.baseArrayLayer = 0;
-    image_view_create_info.subresourceRange.layerCount = 1;
+    VkImageViewCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO;
+    info.image = image;
+    info.viewType = VK_IMAGE_VIEW_TYPE_2D;
+    info.format = format;
+    info.components = {VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY, VK_COMPONENT_SWIZZLE_IDENTITY};
+    info.subresourceRange.aspectMask = VK_IMAGE_ASPECT_DEPTH_BIT;
+    info.subresourceRange.baseMipLevel = 0;
+    info.subresourceRange.levelCount = 1;
+    info.subresourceRange.baseArrayLayer = 0;
+    info.subresourceRange.layerCount = 1;
 
     VkImageView view;
 
-    auto result = vkCreateImageView(device, &image_view_create_info, nullptr, &view);
+    auto result = vkCreateImageView(device, &info, nullptr, &view);
     checkVulkanResult(result, "Failed to create image view.");
 
     return view;
@@ -1208,10 +1206,9 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
         memory_type_bits = memory_type_bits >> 1;
     }
 
-
     VkDeviceMemory memory;
 
-    VkResult result = vkAllocateMemory(device, &memory_allocate_info, NULL, &memory);
+    auto result = vkAllocateMemory(device, &memory_allocate_info, NULL, &memory);
     checkVulkanResult(result, "Failed to allocate device memory.");
 
     return tuple<VkDeviceMemory, uint32_t>(memory, memory_type_bits);
@@ -1238,7 +1235,8 @@ VkImage createDepthImage(VkDevice device,
     imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VkImage image;
-    VkResult result = vkCreateImage(device, &imageCreateInfo, nullptr, &image);
+
+    auto result = vkCreateImage(device, &imageCreateInfo, nullptr, &image);
     checkVulkanResult(result, "Failed to create depth image.");
 
     return image;
@@ -1269,26 +1267,6 @@ VkImage createColorImage(VkDevice device,
     checkVulkanResult(result, "Failed to create color image.");
 
     return image;
-}
-
-void submitCommandBufferToQueue(VkQueue queue,
-                                VkCommandBuffer buffer,
-                                VkFence submit_fence)
-{
-    VkPipelineStageFlags waitStageMash[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
-
-    VkSubmitInfo submitInfo = {};
-    submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-    submitInfo.waitSemaphoreCount = 0;
-    submitInfo.pWaitSemaphores = nullptr;
-    submitInfo.pWaitDstStageMask = waitStageMash;
-    submitInfo.commandBufferCount = 1;
-    submitInfo.pCommandBuffers = &buffer;
-    submitInfo.signalSemaphoreCount = 0;
-    submitInfo.pSignalSemaphores = nullptr;
-
-    VkResult result = vkQueueSubmit(queue, 1, &submitInfo, submit_fence);
-    checkVulkanResult(result, "Could not submit queue.");
 }
 
 vector<VkImage> getSwapchainImages(VkDevice device,
