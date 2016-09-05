@@ -20,7 +20,9 @@ using std::endl;
 using std::exception;
 using std::find;
 using std::runtime_error;
+using std::string;
 using std::tie;
+using std::to_string;
 using std::tuple;
 using std::vector;
 
@@ -78,7 +80,7 @@ struct
 vulkan_context context;
 
 
-void assert(bool flag, const char* const msg = "")
+void assert(bool flag, const string& msg)
 {
     if (!flag)
     {
@@ -86,9 +88,9 @@ void assert(bool flag, const char* const msg = "")
     }
 }
 
-void checkVulkanResult(VkResult result, const char* const msg)
+void checkVulkanResult(VkResult result, const string& msg)
 {
-    assert(result == VK_SUCCESS, msg);
+    assert(result == VK_SUCCESS, msg + " Error code: " + to_string(result));
 }
 
 
@@ -759,6 +761,9 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             background.format = VK_FORMAT_R8G8B8A8_UNORM;
             background.image = createColorImage(context.device, context.width, context.height, background.format);
             tie(background.memory, background.memory_bits) = allocateDeviceMemoryForImage(context.device, background.image);
+
+//            mapped = mapDeviceMemory(context.device, background.memory);
+//            vkUnmapMemory(context.device, background.memory);
         }
 
         // TUTORIAL_014 Shaders
