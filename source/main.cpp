@@ -66,7 +66,14 @@ struct vulkan_context
 HWND createWindow(HINSTANCE hInstance, const char* window_caption);
 void checkAvailableValidationLayers();
 void checkAvailableExtensions(const char* const* extensions);
-VkImage background_image;
+
+struct
+{
+    VkImage image;
+    VkDeviceMemory memory;
+    uint32_t memory_bits;
+    VkFormat format;
+} background;
 
 vulkan_context context;
 
@@ -688,7 +695,6 @@ int CALLBACK WinMain(HINSTANCE hInstance,
             checkVulkanResult(result, "Could not create ImageView.");
         }
 
-
         // create a depth image:
         VkFormat format = VK_FORMAT_D16_UNORM;
         VkDeviceMemory image_memory;
@@ -697,8 +703,6 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         context.depthImage = createDepthImage(context.device, context.width, context.height, format);
         tie(image_memory, memory_type_bits) = allocateDeviceMemoryForImage(context.device, context.depthImage);
         bindImageMemory(context.device, context.depthImage, image_memory, 0);
-
-//        background_image = createColorImage(context.device, context.width, context.height, format);
 
         // before using this depth buffer we must change it's layout:
         {
@@ -751,6 +755,11 @@ int CALLBACK WinMain(HINSTANCE hInstance,
 
         bindBufferMemory(context.device, context.vertexInputBuffer, vertexBufferMemory);
 
+        {
+            background.format = VK_FORMAT_R8G8B8A8_UNORM;
+            background.image = createColorImage(context.device, context.width, context.height, background.format);
+            tie(background.memory, background.memory_bits) = allocateDeviceMemoryForImage(context.device, background.image);
+        }
 
         // TUTORIAL_014 Shaders
         VkShaderModule vertexShaderModule = createShaderModule(context.device, "../data/shaders/vert.spv");
@@ -1194,16 +1203,16 @@ void bindImageMemory(VkDevice device,
 tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
                                                              VkImage image)
 {
-    VkMemoryRequirements requirements = {};
+    VkMemoryRequirements requirements {};
     vkGetImageMemoryRequirements(device, image, &requirements);
     cout << "Image memory requirements:" << endl;
     cout << "   Size: " << requirements.size << endl;
     cout << "   Alignment: " << requirements.alignment << endl;
     cout << "   Memory type bits: " << requirements.memoryTypeBits << endl;
 
-    VkMemoryAllocateInfo memory_allocate_info = {};
-    memory_allocate_info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-    memory_allocate_info.allocationSize = requirements.size;
+    VkMemoryAllocateInfo info = {};
+    info.sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+    info.allocationSize = requirements.size;
 
     // memory_type_bits is a bitfield where if bit i is set, it means that
     // the VkMemoryType i of the VkPhysicalDeviceMemoryProperties structure
@@ -1217,7 +1226,7 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
         {
             if ((memory_type.propertyFlags & desired_memory_flags) == desired_memory_flags)
             {
-                memory_allocate_info.memoryTypeIndex = i;
+                info.memoryTypeIndex = i;
                 break;
             }
         }
@@ -1226,8 +1235,8 @@ tuple<VkDeviceMemory, uint32_t> allocateDeviceMemoryForImage(VkDevice device,
 
     VkDeviceMemory memory;
 
-    auto result = vkAllocateMemory(device, &memory_allocate_info, NULL, &memory);
-    checkVulkanResult(result, "Failed to allocate device memory.");
+    auto result = vkAllocateMemory(device, &info, nullptr, &memory);
+    checkVulkanResult(result, "Failed to allocate device memory for image.");
 
     return tuple<VkDeviceMemory, uint32_t>(memory, memory_type_bits);
 }
