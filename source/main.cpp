@@ -349,6 +349,8 @@ void queueSubmit(VkQueue queue,
                  VkSemaphore* waiting_semaphore,
                  VkSemaphore* signaling_semaphore);
 
+void* mapDeviceMemory(VkDevice device,
+                      VkDeviceMemory memory);
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -697,11 +699,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,
 
         // before using this depth buffer we must change it's layout:
         {
-            VkCommandBufferBeginInfo beginInfo = {};
-            beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-            beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-            vkBeginCommandBuffer(context.setupCmdBuffer, &beginInfo);
+            beginCommandBuffer(context.setupCmdBuffer, VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT);
             commandPipelineBarrier(context.setupCmdBuffer,
                                    VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
                                    static_cast<VkAccessFlagBits>(0),
@@ -739,18 +737,16 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         VkDeviceMemory vertexBufferMemory = allocateDeviceMemoryForBuffer(context.device, context.vertexInputBuffer, memory_type_bits);
 
         // set buffer content:
-        void* mapped;
-        auto result = vkMapMemory(context.device, vertexBufferMemory, 0, VK_WHOLE_SIZE, 0, &mapped);
-        checkVulkanResult(result, "Failed to map buffer memory.");
-
-        vertex* triangle = (vertex*) mapped;
-        triangle[0] = {-1.0f, -1.0f, 0, 1.0f};
-        triangle[1] = {1.0f, -1.0f, 0, 1.0f};
-        triangle[2] = {0.0f, 1.0f, 0, 1.0f};
-
+        void* mapped = mapDeviceMemory(context.device, vertexBufferMemory);
+        {
+            vertex* triangle = (vertex*) mapped;
+            triangle[0] = {-1.0f, -1.0f, 0, 1.0f};
+            triangle[1] = {1.0f, -1.0f, 0, 1.0f};
+            triangle[2] = {0.0f, 1.0f, 0, 1.0f};
+        }
         vkUnmapMemory(context.device, vertexBufferMemory);
 
-        result = vkBindBufferMemory(context.device, context.vertexInputBuffer, vertexBufferMemory, 0);
+        auto result = vkBindBufferMemory(context.device, context.vertexInputBuffer, vertexBufferMemory, 0);
         checkVulkanResult(result, "Failed to bind buffer memory.");
 
         // TUTORIAL_014 Shaders
@@ -935,6 +931,17 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+void* mapDeviceMemory(VkDevice device,
+                      VkDeviceMemory memory)
+{
+    void* mapped;
+
+    auto result = vkMapMemory(device, memory, 0, VK_WHOLE_SIZE, 0, &mapped);
+    checkVulkanResult(result, "Failed to map memory.");
+
+    return mapped;
 }
 
 array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
