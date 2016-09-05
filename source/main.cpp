@@ -348,9 +348,12 @@ void queueSubmit(VkQueue queue,
                  VkPipelineStageFlags pipeline_stage,
                  VkSemaphore* waiting_semaphore,
                  VkSemaphore* signaling_semaphore);
-
 void* mapDeviceMemory(VkDevice device,
                       VkDeviceMemory memory);
+void bindBufferMemory(VkDevice device,
+                      VkBuffer buffer,
+                      VkDeviceMemory memory);
+
 VKAPI_ATTR VkBool32 VKAPI_CALL MyDebugReportCallback(VkDebugReportFlagsEXT flags,
                                                      VkDebugReportObjectTypeEXT objectType,
                                                      uint64_t object,
@@ -746,8 +749,8 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         }
         vkUnmapMemory(context.device, vertexBufferMemory);
 
-        auto result = vkBindBufferMemory(context.device, context.vertexInputBuffer, vertexBufferMemory, 0);
-        checkVulkanResult(result, "Failed to bind buffer memory.");
+        bindBufferMemory(context.device, context.vertexInputBuffer, vertexBufferMemory);
+
 
         // TUTORIAL_014 Shaders
         VkShaderModule vertexShaderModule = createShaderModule(context.device, "../data/shaders/vert.spv");
@@ -900,7 +903,7 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         pipelineCreateInfo.basePipelineHandle = VK_NULL_HANDLE;
         pipelineCreateInfo.basePipelineIndex = 0;
 
-        result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &context.pipeline);
+        auto result = vkCreateGraphicsPipelines(context.device, VK_NULL_HANDLE, 1, &pipelineCreateInfo, nullptr, &context.pipeline);
         checkVulkanResult(result, "Failed to create graphics pipeline.");
 
 
@@ -931,6 +934,14 @@ int CALLBACK WinMain(HINSTANCE hInstance,
         cout << "==================" << endl;
         cout << e.what() << endl;
     }
+}
+
+void bindBufferMemory(VkDevice device,
+                      VkBuffer buffer,
+                      VkDeviceMemory memory)
+{
+    auto result = vkBindBufferMemory(device, buffer, memory, 0);
+    checkVulkanResult(result, "Failed to bind buffer memory.");
 }
 
 void* mapDeviceMemory(VkDevice device,
