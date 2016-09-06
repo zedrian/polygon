@@ -80,7 +80,8 @@ struct
 vulkan_context context;
 
 
-void assert(bool flag, const string& msg)
+void assert(bool flag,
+            const string& msg)
 {
     if (!flag)
     {
@@ -88,7 +89,8 @@ void assert(bool flag, const string& msg)
     }
 }
 
-void checkVulkanResult(VkResult result, const string& msg)
+void checkVulkanResult(VkResult result,
+                       const string& msg)
 {
     assert(result == VK_SUCCESS, msg + " Error code: " + to_string(result));
 }
@@ -258,7 +260,9 @@ void win32_LoadVulkanExtensions(vulkan_context& context)
 }
 
 void checkAllAvailableExtensions();
-void createVulkanApplication(const char* const* layers, const char* const* extensions, const char* application_name);
+void createVulkanApplication(const char* const* layers,
+                             const char* const* extensions,
+                             const char* application_name);
 void setupDebugCallback();
 void createWindowSurface(HINSTANCE hInstance, HWND windowHandle);
 void findCompatiblePhysicalDevice();
@@ -450,9 +454,9 @@ void queueSubmit(VkQueue queue,
                  VkSemaphore* waiting_semaphore,
                  VkSemaphore* signaling_semaphore)
 {
-    VkPipelineStageFlags waitStageMash = {pipeline_stage};
+    VkPipelineStageFlags waitStageMash {pipeline_stage};
 
-    VkSubmitInfo info = {};
+    VkSubmitInfo info {};
     info.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
     info.waitSemaphoreCount = waiting_semaphore ? 1 : 0;
     info.pWaitSemaphores = waiting_semaphore;
@@ -469,7 +473,7 @@ void queueSubmit(VkQueue queue,
 VkFence createFence(VkDevice device)
 {
     VkFence fence;
-    VkFenceCreateInfo info = {};
+    VkFenceCreateInfo info {};
     info.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO;
 
     auto result = vkCreateFence(device, &info, nullptr, &fence);
@@ -484,7 +488,7 @@ void commandBeginRenderPass(VkCommandBuffer command_buffer,
                             const VkRect2D& render_area,
                             VkClearValue* clear_value)
 {
-    VkRenderPassBeginInfo info = {};
+    VkRenderPassBeginInfo info {};
     info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
     info.renderPass = pass;
     info.framebuffer = framebuffer;
@@ -505,17 +509,17 @@ void commandPipelineBarrier(VkCommandBuffer buffer,
                             VkImage image,
                             VkImageAspectFlags image_aspect)
 {
-    VkImageMemoryBarrier layoutTransitionBarrier = {};
-    layoutTransitionBarrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
-    layoutTransitionBarrier.srcAccessMask = source_access_flags;
-    layoutTransitionBarrier.dstAccessMask = destination_access_flags;
-    layoutTransitionBarrier.oldLayout = old_layout;
-    layoutTransitionBarrier.newLayout = new_layout;
-    layoutTransitionBarrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    layoutTransitionBarrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
-    layoutTransitionBarrier.image = image;
-    VkImageSubresourceRange resourceRange = {image_aspect, 0, 1, 0, 1};
-    layoutTransitionBarrier.subresourceRange = resourceRange;
+    VkImageMemoryBarrier barrier {};
+    barrier.sType = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
+    barrier.srcAccessMask = source_access_flags;
+    barrier.dstAccessMask = destination_access_flags;
+    barrier.oldLayout = old_layout;
+    barrier.newLayout = new_layout;
+    barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+    barrier.image = image;
+    VkImageSubresourceRange resourceRange {image_aspect, 0, 1, 0, 1};
+    barrier.subresourceRange = resourceRange;
 
     vkCmdPipelineBarrier(buffer,
                          source_stage_mask,
@@ -523,7 +527,7 @@ void commandPipelineBarrier(VkCommandBuffer buffer,
                          0,
                          0, nullptr,
                          0, nullptr,
-                         1, &layoutTransitionBarrier);
+                         1, &barrier);
 }
 
 void queuePresent(VkQueue queue,
@@ -531,7 +535,7 @@ void queuePresent(VkQueue queue,
                   VkSwapchainKHR* swapchain,
                   uint32_t* next_image_index)
 {
-    VkPresentInfoKHR info = {};
+    VkPresentInfoKHR info {};
     info.sType = VK_STRUCTURE_TYPE_PRESENT_INFO_KHR;
     info.pNext = nullptr;
     info.waitSemaphoreCount = 1;
@@ -541,17 +545,19 @@ void queuePresent(VkQueue queue,
     info.pImageIndices = next_image_index;
     info.pResults = nullptr;
 
-    checkVulkanResult(vkQueuePresentKHR(queue, &info), "Failed to queue present.");
+    auto result = vkQueuePresentKHR(queue, &info);
+    checkVulkanResult(result, "Failed to queue present.");
 }
 
 void beginCommandBuffer(VkCommandBuffer buffer,
                         VkCommandBufferUsageFlagBits usage_bits)
 {
-    VkCommandBufferBeginInfo beginInfo = {};
-    beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-    beginInfo.flags = usage_bits;
+    VkCommandBufferBeginInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+    info.flags = usage_bits;
 
-    checkVulkanResult(vkBeginCommandBuffer(buffer, &beginInfo), "Failed to begin command buffer.");
+    auto result = vkBeginCommandBuffer(buffer, &info);
+    checkVulkanResult(result, "Failed to begin command buffer.");
 }
 
 uint32_t acquireNextImageIndex(VkDevice device,
@@ -568,7 +574,7 @@ uint32_t acquireNextImageIndex(VkDevice device,
 
 VkSemaphore createSemaphore(VkDevice device)
 {
-    VkSemaphoreCreateInfo info{VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 0, 0};
+    VkSemaphoreCreateInfo info {VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO, 0, 0};
 
     VkSemaphore semaphore;
     vkCreateSemaphore(device, &info, nullptr, &semaphore);
@@ -972,35 +978,35 @@ void* mapDeviceMemory(VkDevice device,
 array<VkPipelineShaderStageCreateInfo, 2> prepareShaderStageCreateInfo(VkShaderModule vertex_shader,
                                                                        VkShaderModule fragment_shader)
 {
-    array<VkPipelineShaderStageCreateInfo, 2> create_info;
+    array<VkPipelineShaderStageCreateInfo, 2> info;
 
-    create_info[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    create_info[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
-    create_info[0].module = vertex_shader;
-    create_info[0].pName = "main";
-    create_info[0].pSpecializationInfo = nullptr; // TODO: read more about
+    info[0].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info[0].stage = VK_SHADER_STAGE_VERTEX_BIT;
+    info[0].module = vertex_shader;
+    info[0].pName = "main";
+    info[0].pSpecializationInfo = nullptr; // TODO: read more about
 
-    create_info[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
-    create_info[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
-    create_info[1].module = fragment_shader;
-    create_info[1].pName = "main";
-    create_info[1].pSpecializationInfo = nullptr;
+    info[1].sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+    info[1].stage = VK_SHADER_STAGE_FRAGMENT_BIT;
+    info[1].module = fragment_shader;
+    info[1].pName = "main";
+    info[1].pSpecializationInfo = nullptr;
 
-    return move(create_info);
+    return move(info);
 }
 
 VkPipelineLayout createPipelineLayout(VkDevice device)
 {
-    VkPipelineLayoutCreateInfo create_info = {};
-    create_info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-    create_info.setLayoutCount = 0;
-    create_info.pSetLayouts = nullptr;    // Not setting any bindings!
-    create_info.pushConstantRangeCount = 0;
-    create_info.pPushConstantRanges = nullptr;
+    VkPipelineLayoutCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    info.setLayoutCount = 0;
+    info.pSetLayouts = nullptr;    // Not setting any bindings!
+    info.pushConstantRangeCount = 0;
+    info.pPushConstantRanges = nullptr;
 
     VkPipelineLayout layout;
 
-    auto result = vkCreatePipelineLayout(device, &create_info, nullptr, &layout);
+    auto result = vkCreatePipelineLayout(device, &info, nullptr, &layout);
     checkVulkanResult(result, "Failed to create pipeline layout.");
 
     return layout;
