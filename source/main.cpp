@@ -1477,15 +1477,15 @@ tuple<VkFormat, VkColorSpaceKHR> getColorFormatAndSpace()
 
 VkCommandBuffer createCommandBuffer(VkCommandPool commandPool)
 {
-    VkCommandBufferAllocateInfo commandBufferAllocationInfo = {};
-    commandBufferAllocationInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-    commandBufferAllocationInfo.commandPool = commandPool;
-    commandBufferAllocationInfo.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-    commandBufferAllocationInfo.commandBufferCount = 1;
+    VkCommandBufferAllocateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
+    info.commandPool = commandPool;
+    info.level = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
+    info.commandBufferCount = 1;
 
     VkCommandBuffer buffer;
 
-    auto result = vkAllocateCommandBuffers(context.device, &commandBufferAllocationInfo, &buffer);
+    auto result = vkAllocateCommandBuffers(context.device, &info, &buffer);
     checkVulkanResult(result, "Failed to allocate command buffer.");
 
     return buffer;
@@ -1493,59 +1493,59 @@ VkCommandBuffer createCommandBuffer(VkCommandPool commandPool)
 
 VkCommandPool createCommandPool()
 {
-    VkCommandPoolCreateInfo commandPoolCreateInfo = {};
-    commandPoolCreateInfo.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
-    commandPoolCreateInfo.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
-    commandPoolCreateInfo.queueFamilyIndex = context.presentQueueIdx;
+    VkCommandPoolCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO;
+    info.flags = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT;
+    info.queueFamilyIndex = context.presentQueueIdx;
 
     VkCommandPool commandPool;
-    checkVulkanResult(vkCreateCommandPool(context.device, &commandPoolCreateInfo, nullptr, &commandPool),
+    checkVulkanResult(vkCreateCommandPool(context.device, &info, nullptr, &commandPool),
                       "Failed to create command pool.");
     return commandPool;
 }
 
 void createVulkanDevice(const char* const* layers)
 {
-    VkDeviceQueueCreateInfo queueCreateInfo = {};
+    VkDeviceQueueCreateInfo queueCreateInfo {};
     queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
     queueCreateInfo.queueFamilyIndex = context.presentQueueIdx;
     queueCreateInfo.queueCount = 1;
     float queuePriorities[] = {1.0f};
     queueCreateInfo.pQueuePriorities = queuePriorities;
 
-    VkDeviceCreateInfo device_create_info = {};
-    device_create_info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
-    device_create_info.queueCreateInfoCount = 1;
-    device_create_info.pQueueCreateInfos = &queueCreateInfo;
-    device_create_info.enabledLayerCount = 1;
-    device_create_info.ppEnabledLayerNames = layers;
+    VkDeviceCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    info.queueCreateInfoCount = 1;
+    info.pQueueCreateInfos = &queueCreateInfo;
+    info.enabledLayerCount = 1;
+    info.ppEnabledLayerNames = layers;
 
     const char* deviceExtensions[] = {"VK_KHR_swapchain"};
-    device_create_info.enabledExtensionCount = 1;
-    device_create_info.ppEnabledExtensionNames = deviceExtensions;
+    info.enabledExtensionCount = 1;
+    info.ppEnabledExtensionNames = deviceExtensions;
 
-    VkPhysicalDeviceFeatures features = {};
+    VkPhysicalDeviceFeatures features {};
     features.shaderClipDistance = VK_TRUE;
-    device_create_info.pEnabledFeatures = &features;
+    info.pEnabledFeatures = &features;
 
-    checkVulkanResult(vkCreateDevice(context.physicalDevice, &device_create_info, nullptr, &context.device),
+    checkVulkanResult(vkCreateDevice(context.physicalDevice, &info, nullptr, &context.device),
                       "Failed to create logical device!");
 }
 
 void findCompatiblePhysicalDevice()
 {
 // Find a physical device that has a queue where we can present and do graphics:
-    uint32_t physicalDeviceCount = 0;
-    vkEnumeratePhysicalDevices(context.instance, &physicalDeviceCount, nullptr);
-    cout << "Physical devices: " << physicalDeviceCount << endl;
-    VkPhysicalDevice* physicalDevices = new VkPhysicalDevice[physicalDeviceCount];
-    vkEnumeratePhysicalDevices(context.instance, &physicalDeviceCount, physicalDevices);
+    uint32_t physical_device_count = 0;
+    vkEnumeratePhysicalDevices(context.instance, &physical_device_count, nullptr);
+    cout << "Physical devices: " << physical_device_count << endl;
+    VkPhysicalDevice* physical_devices = new VkPhysicalDevice[physical_device_count];
+    vkEnumeratePhysicalDevices(context.instance, &physical_device_count, physical_devices);
 
-    for (uint32_t i = 0; i < physicalDeviceCount; ++i)
+    for (uint32_t i = 0; i < physical_device_count; ++i)
     {
         cout << "Device #" << i << ":" << endl;
         VkPhysicalDeviceProperties deviceProperties = {};
-        vkGetPhysicalDeviceProperties(physicalDevices[i], &deviceProperties);
+        vkGetPhysicalDeviceProperties(physical_devices[i], &deviceProperties);
         cout << "   API version: " << deviceProperties.apiVersion << endl;
         cout << "   Driver version: " << deviceProperties.driverVersion << endl;
         cout << "   Vendor ID: " << deviceProperties.vendorID << endl;
@@ -1561,125 +1561,121 @@ void findCompatiblePhysicalDevice()
              << endl;
         cout << "       ..." << endl;
 
-        uint32_t queueFamilyCount = 0;
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueFamilyCount, NULL);
-        VkQueueFamilyProperties* queueFamilyProperties = new VkQueueFamilyProperties[queueFamilyCount];
-        vkGetPhysicalDeviceQueueFamilyProperties(physicalDevices[i], &queueFamilyCount, queueFamilyProperties);
-        cout << i << ". Queue families: " << queueFamilyCount << endl;
+        uint32_t queue_family_count = 0;
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, nullptr);
+        VkQueueFamilyProperties* queue_family_properties = new VkQueueFamilyProperties[queue_family_count];
+        vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[i], &queue_family_count, queue_family_properties);
+        cout << i << ". Queue families: " << queue_family_count << endl;
 
-        for (uint32_t j = 0; j < queueFamilyCount; ++j)
+        for (uint32_t j = 0; j < queue_family_count; ++j)
         {
-            cout << "   Queue count: " << queueFamilyProperties[j].queueCount << endl;
-            cout << "   Queue flags: " << queueFamilyProperties[j].queueFlags << endl;
-            cout << "   Timestamp valid bits: " << queueFamilyProperties[j].timestampValidBits << endl;
+            cout << "   Queue count: " << queue_family_properties[j].queueCount << endl;
+            cout << "   Queue flags: " << queue_family_properties[j].queueFlags << endl;
+            cout << "   Timestamp valid bits: " << queue_family_properties[j].timestampValidBits << endl;
             cout << "   Min image transfer granularity: "
-                 << queueFamilyProperties[j].minImageTransferGranularity.width << " "
-                 << queueFamilyProperties[j].minImageTransferGranularity.height << " "
-                 << queueFamilyProperties[j].minImageTransferGranularity.depth << endl;
+                 << queue_family_properties[j].minImageTransferGranularity.width << " "
+                 << queue_family_properties[j].minImageTransferGranularity.height << " "
+                 << queue_family_properties[j].minImageTransferGranularity.depth << endl;
 
-            VkBool32 supportsPresent;
-            vkGetPhysicalDeviceSurfaceSupportKHR(physicalDevices[i], j, context.surface, &supportsPresent);
+            VkBool32 supports_present;
+            vkGetPhysicalDeviceSurfaceSupportKHR(physical_devices[i], j, context.surface, &supports_present);
 
-            if (supportsPresent &&
-                queueFamilyProperties[j].queueFlags & (VK_QUEUE_GRAPHICS_BIT || VK_QUEUE_COMPUTE_BIT))
+            if (supports_present &&
+                queue_family_properties[j].queueFlags & (VK_QUEUE_GRAPHICS_BIT || VK_QUEUE_COMPUTE_BIT))
             {
-                context.physicalDevice = physicalDevices[i];
+                context.physicalDevice = physical_devices[i];
                 context.physicalDeviceProperties = deviceProperties;
                 context.presentQueueIdx = j;
             }
         }
 
-        delete[] queueFamilyProperties;
+        delete[] queue_family_properties;
 
         if (context.physicalDevice)
         {
             break;
         }
     }
-    delete[] physicalDevices;
+    delete[] physical_devices;
 
     assert(context.physicalDevice, "No physical device present that can render and present!");
 
-    // Fill up the physical device memory properties:
     vkGetPhysicalDeviceMemoryProperties(context.physicalDevice, &context.memoryProperties);
 }
 
 void createWindowSurface(HINSTANCE hInstance, HWND windowHandle)
 {
-    VkWin32SurfaceCreateInfoKHR surfaceCreateInfo = {};
-    surfaceCreateInfo.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
-    surfaceCreateInfo.hinstance = hInstance;
-    surfaceCreateInfo.hwnd = windowHandle;
+    VkWin32SurfaceCreateInfoKHR info {};
+    info.sType = VK_STRUCTURE_TYPE_WIN32_SURFACE_CREATE_INFO_KHR;
+    info.hinstance = hInstance;
+    info.hwnd = windowHandle;
 
-    checkVulkanResult(vkCreateWin32SurfaceKHR(context.instance, &surfaceCreateInfo, NULL, &context.surface),
-                      "Could not create surface.");
+    auto result = vkCreateWin32SurfaceKHR(context.instance, &info, NULL, &context.surface);
+    checkVulkanResult(result, "Could not create surface.");
 }
 
 void setupDebugCallback()
 {
-    VkDebugReportCallbackCreateInfoEXT callbackCreateInfo = {};
-    callbackCreateInfo.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
-    callbackCreateInfo.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT |
-                               VK_DEBUG_REPORT_WARNING_BIT_EXT |
-                               VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
-    callbackCreateInfo.pfnCallback = &MyDebugReportCallback;
-    callbackCreateInfo.pUserData = NULL;
+    VkDebugReportCallbackCreateInfoEXT info {};
+    info.sType = VK_STRUCTURE_TYPE_DEBUG_REPORT_CREATE_INFO_EXT;
+    info.flags = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT | VK_DEBUG_REPORT_PERFORMANCE_WARNING_BIT_EXT;
+    info.pfnCallback = &MyDebugReportCallback;
+    info.pUserData = nullptr;
 
-    checkVulkanResult(vkCreateDebugReportCallbackEXT(context.instance, &callbackCreateInfo, NULL, &context.callback),
-                      "Failed to create debug report callback.");
+    auto result = vkCreateDebugReportCallbackEXT(context.instance, &info, nullptr, &context.callback);
+    checkVulkanResult(result, "Failed to create debug report callback.");
 }
 
 void createVulkanApplication(const char* const* layers,
                              const char* const* extensions,
                              const char* application_name)
 {
-    VkResult result;
-    VkApplicationInfo applicationInfo = {};
-    applicationInfo.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
-    applicationInfo.pApplicationName = application_name;
-    applicationInfo.engineVersion = 1;
-    applicationInfo.apiVersion = VK_MAKE_VERSION(1, 0, 24);
+    VkApplicationInfo application_info {};
+    application_info.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO;
+    application_info.pApplicationName = application_name;
+    application_info.engineVersion = 1;
+    application_info.apiVersion = VK_MAKE_VERSION(1, 0, 24);
 
-    VkInstanceCreateInfo instanceInfo = {};
-    instanceInfo.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
-    instanceInfo.pApplicationInfo = &applicationInfo;
-    instanceInfo.enabledLayerCount = 1;
-    instanceInfo.ppEnabledLayerNames = layers;
-    instanceInfo.enabledExtensionCount = 3;
-    instanceInfo.ppEnabledExtensionNames = extensions;
+    VkInstanceCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO;
+    info.pApplicationInfo = &application_info;
+    info.enabledLayerCount = 1;
+    info.ppEnabledLayerNames = layers;
+    info.enabledExtensionCount = 3;
+    info.ppEnabledExtensionNames = extensions;
 
-    checkVulkanResult(vkCreateInstance(&instanceInfo, NULL, &context.instance), "Failed to create vulkan instance.");
+    auto result = vkCreateInstance(&info, nullptr, &context.instance);
+    checkVulkanResult(result, "Failed to create Vulkan instance.");
 }
 
 void checkAvailableExtensions(const char* const* extensions)
 {
-    uint32_t extensionCount = 0;
-    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, NULL);
-    VkExtensionProperties* extensionsAvailable = new VkExtensionProperties[extensionCount];
-    vkEnumerateInstanceExtensionProperties(NULL, &extensionCount, extensionsAvailable);
-    //cout << "Extensions available: " << extensionCount << endl;
-    uint32_t foundExtensions = 0;
-    for (int i = 0; i < extensionCount; ++i)
-    {
+    uint32_t extension_count = 0;
+    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
+
+    VkExtensionProperties* extensionsAvailable = new VkExtensionProperties[extension_count];
+    vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, extensionsAvailable);
+    //cout << "Extensions available: " << extension_count << endl;
+    uint32_t extensions_found = 0;
+    for (int i = 0; i < extension_count; ++i)
         if (strcmp(extensionsAvailable[i].extensionName, extensions[i]) == 0)
-        {
-            foundExtensions++;
-        }
-    }
-    assert(foundExtensions == 3, "Could not find debug extension");
+            extensions_found++;
+
+    assert(extensions_found == 3, "Could not find debug extension.");
 }
 
 void checkAvailableValidationLayers()
 {
-    uint32_t layerCount = 0;
-    vkEnumerateInstanceLayerProperties(&layerCount, NULL);
-    VkLayerProperties* layersAvailable = new VkLayerProperties[layerCount];
-    vkEnumerateInstanceLayerProperties(&layerCount, layersAvailable);
+    uint32_t layer_count = 0;
+    vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
+    
+    VkLayerProperties* layers_available = new VkLayerProperties[layer_count];
+    vkEnumerateInstanceLayerProperties(&layer_count, layers_available);
 
     bool foundValidation = false;
-    for (int i = 0; i < layerCount; ++i)
+    for (int i = 0; i < layer_count; ++i)
     {
-        if (strcmp(layersAvailable[i].layerName, "VK_LAYER_LUNARG_standard_validation") == 0)
+        if (strcmp(layers_available[i].layerName, "VK_LAYER_LUNARG_standard_validation") == 0)
         {
             foundValidation = true;
         }
