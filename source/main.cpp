@@ -765,11 +765,11 @@ int CALLBACK WinMain(HINSTANCE hInstance,
 
         {
             background.format = VK_FORMAT_R8G8B8A8_UNORM;
-            background.image = createColorImage(context.device, context.width, context.height, background.format);
+            background.image = createColorImage(context.device, 10, 10, background.format);
             tie(background.memory, background.memory_bits) = allocateDeviceMemoryForImage(context.device, background.image);
 
-//            mapped = mapDeviceMemory(context.device, background.memory);
-//            vkUnmapMemory(context.device, background.memory);
+            mapped = mapDeviceMemory(context.device, background.memory);
+            vkUnmapMemory(context.device, background.memory);
         }
 
         // TUTORIAL_014 Shaders
@@ -1128,7 +1128,7 @@ VkFramebuffer createFramebuffer(VkDevice device,
 VkRenderPass createRenderPass(VkDevice device,
                               VkFormat color_format)
 {
-    VkAttachmentDescription pass_attachments[2] = {};
+    VkAttachmentDescription pass_attachments[2] {};
     pass_attachments[0].format = color_format;
     pass_attachments[0].samples = VK_SAMPLE_COUNT_1_BIT;
     pass_attachments[0].loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
@@ -1156,23 +1156,23 @@ VkRenderPass createRenderPass(VkDevice device,
     depth_attachment_reference.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     // create the one main subpass of our renderpass:
-    VkSubpassDescription subpass = {};
+    VkSubpassDescription subpass {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &color_attachment_reference;
     subpass.pDepthStencilAttachment = &depth_attachment_reference;
 
     // create our main renderpass:
-    VkRenderPassCreateInfo render_pass_create_info = {};
-    render_pass_create_info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    render_pass_create_info.attachmentCount = 2;
-    render_pass_create_info.pAttachments = pass_attachments;
-    render_pass_create_info.subpassCount = 1;
-    render_pass_create_info.pSubpasses = &subpass;
+    VkRenderPassCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
+    info.attachmentCount = 2;
+    info.pAttachments = pass_attachments;
+    info.subpassCount = 1;
+    info.pSubpasses = &subpass;
 
     VkRenderPass render_pass;
 
-    auto result = vkCreateRenderPass(device, &render_pass_create_info, nullptr, &render_pass);
+    auto result = vkCreateRenderPass(device, &info, nullptr, &render_pass);
     checkVulkanResult(result, "Failed to create render pass");
 
     return render_pass;
@@ -1257,24 +1257,24 @@ VkImage createDepthImage(VkDevice device,
                          uint32_t height,
                          VkFormat format)
 {
-    VkImageCreateInfo imageCreateInfo = {};
-    imageCreateInfo.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
-    imageCreateInfo.imageType = VK_IMAGE_TYPE_2D;
-    imageCreateInfo.format = format;
-    imageCreateInfo.extent = {width, height, 1};
-    imageCreateInfo.mipLevels = 1;
-    imageCreateInfo.arrayLayers = 1;
-    imageCreateInfo.samples = VK_SAMPLE_COUNT_1_BIT;
-    imageCreateInfo.tiling = VK_IMAGE_TILING_OPTIMAL;
-    imageCreateInfo.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
-    imageCreateInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-    imageCreateInfo.queueFamilyIndexCount = 0;
-    imageCreateInfo.pQueueFamilyIndices = nullptr;
-    imageCreateInfo.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    VkImageCreateInfo info {};
+    info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
+    info.imageType = VK_IMAGE_TYPE_2D;
+    info.format = format;
+    info.extent = {width, height, 1};
+    info.mipLevels = 1;
+    info.arrayLayers = 1;
+    info.samples = VK_SAMPLE_COUNT_1_BIT;
+    info.tiling = VK_IMAGE_TILING_OPTIMAL;
+    info.usage = VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT;
+    info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+    info.queueFamilyIndexCount = 0;
+    info.pQueueFamilyIndices = nullptr;
+    info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VkImage image;
 
-    auto result = vkCreateImage(device, &imageCreateInfo, nullptr, &image);
+    auto result = vkCreateImage(device, &info, nullptr, &image);
     checkVulkanResult(result, "Failed to create depth image.");
 
     return image;
@@ -1285,7 +1285,7 @@ VkImage createColorImage(VkDevice device,
                          uint32_t height,
                          VkFormat format)
 {
-    VkImageCreateInfo info{};
+    VkImageCreateInfo info {};
     info.sType = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO;
     info.imageType = VK_IMAGE_TYPE_2D;
     info.format = format;
@@ -1293,14 +1293,15 @@ VkImage createColorImage(VkDevice device,
     info.mipLevels = 1;
     info.arrayLayers = 1;
     info.samples = VK_SAMPLE_COUNT_1_BIT;
-    info.tiling = VK_IMAGE_TILING_OPTIMAL;
-    info.usage = VK_IMAGE_USAGE_COLOR_ATTACHMENT_BIT;
+    info.tiling = VK_IMAGE_TILING_LINEAR;
+    info.usage = VK_IMAGE_USAGE_TRANSFER_SRC_BIT;
     info.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
     info.queueFamilyIndexCount = 0;
     info.pQueueFamilyIndices = nullptr;
     info.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
 
     VkImage image;
+
     auto result = vkCreateImage(device, &info, nullptr, &image);
     checkVulkanResult(result, "Failed to create color image.");
 
